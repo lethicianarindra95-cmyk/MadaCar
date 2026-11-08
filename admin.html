@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MadaCar – Administration</title>
+<style>
+:root{--bg:#1c1c1e;--card:#2a2a2d;--line:#46464b;--txt:#f2f2f3;--mute:#a1a1a8;--acc:#e4e4e7;--ok:#8fd19e;--err:#ff8a80}
+*{box-sizing:border-box}
+html{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{width:100%;max-width:520px;margin:0 auto;padding:24px 18px 48px}
+h1{font-size:26px;margin:0 0 4px}
+p.sub{color:var(--mute);margin:0 0 20px}
+label{display:block;margin:14px 0 6px;font-weight:600;font-size:15px}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:16px}
+button{padding:13px;border:0;border-radius:8px;background:var(--acc);color:#111;font-size:16px;font-weight:700}
+button.full{width:100%;margin-top:18px}
+button.no{background:transparent;color:var(--err);border:1px solid var(--err)}
+button.yes{background:var(--ok)}
+button.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
+button:disabled{opacity:.5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px}
+.card h2{font-size:18px;margin:0 0 4px}
+.card p{margin:2px 0;color:var(--mute);overflow-wrap:anywhere}
+.imgs{display:flex;gap:10px;margin:12px 0}
+.imgs a{flex:1;min-width:0}
+.imgs img{width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:#111}
+.row{display:flex;gap:10px}.row button{flex:1}
+#msg{margin-top:14px;min-height:22px}
+.err{color:var(--err)}.ok{color:var(--ok)}.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>MadaCar admin</h1>
+<p class="sub">Vérification des vendeurs</p>
+
+<section id="vLogin">
+<label for="le">Adresse e-mail</label><input id="le" type="email">
+<label for="lm">Mot de passe</label><input id="lm" type="password">
+<button class="full" id="lgo">Me connecter</button>
+</section>
+
+<section id="vList" class="hide">
+<button class="ghost" id="out">Me déconnecter</button>
+<div id="list"></div>
+</section>
+
+<div id="msg" role="status"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const sb = supabase.createClient("https://cpdksgligvxukghiform.supabase.co","sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1");
+const $ = id => document.getElementById(id);
+const say = (t, c) => { $("msg").textContent = t; $("msg").className = c || ""; };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function load(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $("vLogin").classList.remove("hide"); $("vList").classList.add("hide"); return; }
+  const { data: me } = await sb.from("profiles").select("role").eq("id", session.user.id).maybeSingle();
+  if (!me || me.role !== "admin") { say("Ce compte n'est pas administrateur.", "err"); $("vLogin").classList.add("hide"); $("vList").classList.remove("hide"); $("list").innerHTML = ""; return; }
+  $("vLogin").classList.add("hide"); $("vList").classList.remove("hide"); say("Chargement…");
+  const { data: rows, error } = await sb.from("seller_verifications").select("*").eq("status", "pending").order("created_at");
+  if (error) { say("Erreur : " + error.message, "err"); return; }
+  if (!rows.length) { $("list").innerHTML = ""; say("Aucune demande en attente."); return; }
+  const { data: profs } = await sb.from("profiles").select("id,first_name,last_name,phone").in("id", rows.map(r => r.user_id));
+  const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
+  let html = "";
+  for (const r of rows) {
+    const p = byId[r.user_id] || {};
+    let a = "", b = "";
+    if (r.cin_front_path && r.cin_back_path) {
+      const { data: urls } = await sb.storage.from("cin-documents").createSignedUrls([r.cin_front_path, r.cin_back_path], 600);
+      a = urls?.[0]?.signedUrl || ""; b = urls?.[1]?.signedUrl || "";
+    }
+    html += `<div class="card" data-uid="${esc(r.user_id)}" data-front="${esc(r.cin_front_path)}" data-back="${esc(r.cin_back_path)}">
+      <h2>${esc(p.first_name)} ${esc(p.last_name)}</h2>
+      <p>Tél : ${esc(p.phone)}</p><p>CIN : ${esc(r.cin_number)}</p>
+      <p>Consentement : ${r.consent_given ? "oui" : "non"}</p>
+      <div class="imgs"><a href="${esc(a)}" target="_blank"><img src="${esc(a)}" alt="CIN recto"></a>
+      <a href="${esc(b)}" target="_blank"><img src="${esc(b)}" alt="CIN verso"></a></div>
+      <div class="row"><button class="yes" data-act="verified">Accepter</button><button class="no" data-act="rejected">Refuser</button></div>
+    </div>`;
+  }
+  $("list").innerHTML = html; say(rows.length + " demande(s) en attente.");
+}
+
+$("list").addEventListener("click", async e => {
+  const btn = e.target.closest("button[data-act]"); if (!btn) return;
+  const card = btn.closest(".card"), act = btn.dataset.act;
+  let reason = null;
+  if (act === "rejected") { reason = prompt("Motif du refus :"); if (!reason) return; }
+  else if (!confirm("Confirmer : vendeur vérifié ? Les photos de CIN seront supprimées.")) return;
+  card.querySelectorAll("button").forEach(x => x.disabled = true);
+  const { error } = await sb.rpc("review_verification", { p_user: card.dataset.uid, p_decision: act, p_reason: reason });
+  if (error) { say("Erreur : " + error.message, "err"); card.querySelectorAll("button").forEach(x => x.disabled = false); return; }
+  const files = [card.dataset.front, card.dataset.back].filter(f => f && f !== "null");
+  if (files.length) await sb.storage.from("cin-documents").remove(files);
+  await load(); say("Décision enregistrée, photos supprimées.", "ok");
+});
+
+$("lgo").onclick = async () => {
+  const { error } = await sb.auth.signInWithPassword({ email: $("le").value.trim(), password: $("lm").value });
+  if (error) say("Erreur : " + error.message, "err"); else { say(""); load(); }
+};
+$("out").onclick = async () => { await sb.auth.signOut(); $("list").innerHTML = ""; say(""); load(); };
+load();
+</script>
+</body>
+</html>
