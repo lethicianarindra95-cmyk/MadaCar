@@ -2,112 +2,289 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>MadaCar – Administration</title>
 <style>
-:root{--bg:#1c1c1e;--card:#2a2a2d;--line:#46464b;--txt:#f2f2f3;--mute:#a1a1a8;--acc:#e4e4e7;--ok:#8fd19e;--err:#ff8a80}
-*{box-sizing:border-box}
-html{overflow-x:hidden}
-body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-main{width:100%;max-width:520px;margin:0 auto;padding:24px 18px 48px}
-h1{font-size:26px;margin:0 0 4px}
-p.sub{color:var(--mute);margin:0 0 20px}
-label{display:block;margin:14px 0 6px;font-weight:600;font-size:15px}
-input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:16px}
-button{padding:13px;border:0;border-radius:8px;background:var(--acc);color:#111;font-size:16px;font-weight:700}
-button.full{width:100%;margin-top:18px}
-button.no{background:transparent;color:var(--err);border:1px solid var(--err)}
-button.yes{background:var(--ok)}
-button.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
-button:disabled{opacity:.5}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px}
-.card h2{font-size:18px;margin:0 0 4px}
-.card p{margin:2px 0;color:var(--mute);overflow-wrap:anywhere}
-.imgs{display:flex;gap:10px;margin:12px 0}
-.imgs a{flex:1;min-width:0}
-.imgs img{width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:#111}
-.row{display:flex;gap:10px}.row button{flex:1}
-#msg{margin-top:14px;min-height:22px}
-.err{color:var(--err)}.ok{color:var(--ok)}.hide{display:none}
+  :root {
+    --noir: #000;
+    --fond: #1a1a1a;
+    --carte: #262626;
+    --ligne: #3a3a3a;
+    --gris: #9a9a9a;
+    --texte: #ececec;
+    --ok: #3fa66b;
+    --non: #c9524a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fond); color: var(--texte);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--noir); padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--ligne);
+  }
+  h1 { font-size: 1.15rem; margin: 0; letter-spacing: .2px; }
+  h1 small { color: var(--gris); font-weight: 400; margin-left: 6px; }
+  main { max-width: 560px; margin: 0 auto; padding: 16px; }
+  [hidden] { display: none !important; }
+  label { display: block; margin: 14px 0 4px; color: var(--gris); font-size: .9rem; }
+  input {
+    width: 100%; padding: 12px; font-size: 1rem; color: var(--texte);
+    background: var(--noir); border: 1px solid var(--ligne); border-radius: 8px;
+  }
+  button {
+    font: inherit; color: var(--texte); background: var(--carte);
+    border: 1px solid var(--ligne); border-radius: 8px; padding: 10px 14px; cursor: pointer;
+  }
+  button:focus-visible, input:focus-visible { outline: 2px solid #bdbdbd; outline-offset: 2px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .principal { background: #e4e4e4; color: #000; border-color: #e4e4e4; font-weight: 600; width: 100%; margin-top: 18px; }
+  .ok { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 600; }
+  .non { background: transparent; border-color: var(--non); color: #f0a09b; }
+  .message { margin: 12px 0 0; min-height: 1.4em; color: #f0a09b; }
+  .onglets { display: flex; gap: 8px; margin-bottom: 16px; }
+  .onglets button { flex: 1; padding: 10px 4px; font-size: .92rem; }
+  .onglets button[aria-pressed="true"] { background: #e4e4e4; color: #000; border-color: #e4e4e4; font-weight: 600; }
+  .vendeur { background: var(--carte); border: 1px solid var(--ligne); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .vendeur h2 { margin: 0 0 6px; font-size: 1.05rem; }
+  .vendeur dl { margin: 0 0 12px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: .95rem; }
+  .vendeur dt { color: var(--gris); }
+  .vendeur dd { margin: 0; word-break: break-word; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .actions button { flex: 1 1 auto; }
+  .photos img { display: block; width: 100%; margin: 10px 0 0; border-radius: 6px; border: 1px solid var(--ligne); }
+  .photos p { margin: 12px 0 0; color: var(--gris); font-size: .85rem; }
+  .vide { color: var(--gris); text-align: center; padding: 32px 0; }
+  .etat { font-size: .85rem; color: var(--gris); margin: 8px 0 0; }
 </style>
 </head>
 <body>
+
+<header>
+  <h1>MadaCar <small>Administration</small></h1>
+  <button id="sortir" hidden>Se déconnecter</button>
+</header>
+
 <main>
-<h1>MadaCar admin</h1>
-<p class="sub">Vérification des vendeurs</p>
+  <section id="connexion" hidden>
+    <label for="email">E-mail</label>
+    <input id="email" type="email" autocomplete="username" inputmode="email">
+    <label for="mdp">Mot de passe</label>
+    <input id="mdp" type="password" autocomplete="current-password">
+    <button id="entrer" class="principal">Se connecter</button>
+    <p id="msg-connexion" class="message" role="alert"></p>
+  </section>
 
-<section id="vLogin">
-<label for="le">Adresse e-mail</label><input id="le" type="email">
-<label for="lm">Mot de passe</label><input id="lm" type="password">
-<button class="full" id="lgo">Me connecter</button>
-</section>
-
-<section id="vList" class="hide">
-<button class="ghost" id="out">Me déconnecter</button>
-<div id="list"></div>
-</section>
-
-<div id="msg" role="status"></div>
+  <section id="appli" hidden>
+    <div class="onglets" role="group" aria-label="Filtrer les vendeurs">
+      <button data-onglet="attente" aria-pressed="true">En attente</button>
+      <button data-onglet="verifie" aria-pressed="false">Vérifiés</button>
+      <button data-onglet="refuse" aria-pressed="false">Refusés</button>
+    </div>
+    <p id="msg-appli" class="message" role="alert"></p>
+    <div id="liste"></div>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const sb = supabase.createClient("https://cpdksgligvxukghiform.supabase.co","sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1");
-const $ = id => document.getElementById(id);
-const say = (t, c) => { $("msg").textContent = t; $("msg").className = c || ""; };
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// ---------- Réglages ----------
+const SUPABASE_URL = 'https://cpdksgligvxukghiform.supabase.co';
+// Colle ta clé publishable ici (entre les guillemets). Sinon la page te la demandera une fois.
+const SUPABASE_KEY = 'COLLE_ICI_TA_CLE_PUBLISHABLE';
+// Valeurs de la colonne "status" dans seller_verifications
+const STATUT = { verifie: 'verified', refuse: 'rejected' }; // tout le reste = en attente
+const BUCKET = 'cin-documents';
 
-async function load(){
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { $("vLogin").classList.remove("hide"); $("vList").classList.add("hide"); return; }
-  const { data: me } = await sb.from("profiles").select("role").eq("id", session.user.id).maybeSingle();
-  if (!me || me.role !== "admin") { say("Ce compte n'est pas administrateur.", "err"); $("vLogin").classList.add("hide"); $("vList").classList.remove("hide"); $("list").innerHTML = ""; return; }
-  $("vLogin").classList.add("hide"); $("vList").classList.remove("hide"); say("Chargement…");
-  const { data: rows, error } = await sb.from("seller_verifications").select("*").eq("status", "pending").order("created_at");
-  if (error) { say("Erreur : " + error.message, "err"); return; }
-  if (!rows.length) { $("list").innerHTML = ""; say("Aucune demande en attente."); return; }
-  const { data: profs } = await sb.from("profiles").select("id,first_name,last_name,phone").in("id", rows.map(r => r.user_id));
-  const byId = Object.fromEntries((profs || []).map(p => [p.id, p]));
-  let html = "";
-  for (const r of rows) {
-    const p = byId[r.user_id] || {};
-    let a = "", b = "";
-    if (r.cin_front_path && r.cin_back_path) {
-      const { data: urls } = await sb.storage.from("cin-documents").createSignedUrls([r.cin_front_path, r.cin_back_path], 600);
-      a = urls?.[0]?.signedUrl || ""; b = urls?.[1]?.signedUrl || "";
-    }
-    html += `<div class="card" data-uid="${esc(r.user_id)}" data-front="${esc(r.cin_front_path)}" data-back="${esc(r.cin_back_path)}">
-      <h2>${esc(p.first_name)} ${esc(p.last_name)}</h2>
-      <p>Tél : ${esc(p.phone)}</p><p>CIN : ${esc(r.cin_number)}</p>
-      <p>Consentement : ${r.consent_given ? "oui" : "non"}</p>
-      <div class="imgs"><a href="${esc(a)}" target="_blank"><img src="${esc(a)}" alt="CIN recto"></a>
-      <a href="${esc(b)}" target="_blank"><img src="${esc(b)}" alt="CIN verso"></a></div>
-      <div class="row"><button class="yes" data-act="verified">Accepter</button><button class="no" data-act="rejected">Refuser</button></div>
-    </div>`;
-  }
-  $("list").innerHTML = html; say(rows.length + " demande(s) en attente.");
+// ---------- Outils ----------
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const quand = (d) => d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+let cle = SUPABASE_KEY;
+if (cle.startsWith('COLLE')) {
+  cle = localStorage.getItem('mc_cle') || prompt('Colle ta clé publishable Supabase (une seule fois) :') || '';
+  if (cle) localStorage.setItem('mc_cle', cle.trim());
+}
+const db = supabase.createClient(SUPABASE_URL, cle.trim());
+
+let admin = null, lignes = [], onglet = 'attente';
+
+function afficher(zone) {
+  $('#connexion').hidden = zone !== 'connexion';
+  $('#appli').hidden = zone !== 'appli';
+  $('#sortir').hidden = zone !== 'appli';
+}
+const dire = (id, texte) => { $(id).textContent = texte || ''; };
+
+// ---------- Connexion ----------
+async function demarrer() {
+  if (!cle) { afficher('connexion'); dire('#msg-connexion', 'Clé Supabase manquante. Recharge la page et colle-la.'); return; }
+  const { data } = await db.auth.getSession();
+  if (data.session) await entrer(data.session.user); else afficher('connexion');
 }
 
-$("list").addEventListener("click", async e => {
-  const btn = e.target.closest("button[data-act]"); if (!btn) return;
-  const card = btn.closest(".card"), act = btn.dataset.act;
-  let reason = null;
-  if (act === "rejected") { reason = prompt("Motif du refus :"); if (!reason) return; }
-  else if (!confirm("Confirmer : vendeur vérifié ? Les photos de CIN seront supprimées.")) return;
-  card.querySelectorAll("button").forEach(x => x.disabled = true);
-  const { error } = await sb.rpc("review_verification", { p_user: card.dataset.uid, p_decision: act, p_reason: reason });
-  if (error) { say("Erreur : " + error.message, "err"); card.querySelectorAll("button").forEach(x => x.disabled = false); return; }
-  const files = [card.dataset.front, card.dataset.back].filter(f => f && f !== "null");
-  if (files.length) await sb.storage.from("cin-documents").remove(files);
-  await load(); say("Décision enregistrée, photos supprimées.", "ok");
+async function entrer(user) {
+  const { data: p, error } = await db.from('profiles').select('role').eq('id', user.id).single();
+  if (error || !p || p.role !== 'admin') {
+    await db.auth.signOut();
+    afficher('connexion');
+    dire('#msg-connexion', "Ce compte n'a pas le rôle administrateur.");
+    return;
+  }
+  admin = user;
+  afficher('appli');
+  await charger();
+}
+
+$('#entrer').addEventListener('click', async () => {
+  dire('#msg-connexion', '');
+  const { data, error } = await db.auth.signInWithPassword({
+    email: $('#email').value.trim(), password: $('#mdp').value
+  });
+  if (error) { dire('#msg-connexion', 'Connexion impossible : ' + error.message); return; }
+  await entrer(data.user);
 });
 
-$("lgo").onclick = async () => {
-  const { error } = await sb.auth.signInWithPassword({ email: $("le").value.trim(), password: $("lm").value });
-  if (error) say("Erreur : " + error.message, "err"); else { say(""); load(); }
-};
-$("out").onclick = async () => { await sb.auth.signOut(); $("list").innerHTML = ""; say(""); load(); };
-load();
+$('#sortir').addEventListener('click', async () => {
+  await db.auth.signOut();
+  admin = null; lignes = [];
+  afficher('connexion');
+});
+
+// ---------- Données ----------
+async function charger() {
+  dire('#msg-appli', '');
+  $('#liste').innerHTML = '<p class="vide">Chargement…</p>';
+  const { data: v, error } = await db.from('seller_verifications')
+    .select('*').order('created_at', { ascending: false });
+  if (error) { $('#liste').innerHTML = ''; dire('#msg-appli', 'Lecture impossible : ' + error.message); return; }
+
+  const ids = [...new Set(v.map((x) => x.user_id))];
+  let profils = {};
+  if (ids.length) {
+    const { data: p } = await db.from('profiles')
+      .select('id, first_name, last_name, phone, is_verified').in('id', ids);
+    (p || []).forEach((x) => { profils[x.id] = x; });
+  }
+  lignes = v.map((x) => ({ ...x, profil: profils[x.user_id] || {} }));
+  dessiner();
+}
+
+function groupe(l) {
+  if (l.status === STATUT.verifie) return 'verifie';
+  if (l.status === STATUT.refuse) return 'refuse';
+  return 'attente';
+}
+
+function dessiner() {
+  document.querySelectorAll('.onglets button').forEach((b) => {
+    const n = lignes.filter((l) => groupe(l) === b.dataset.onglet).length;
+    b.textContent = { attente: 'En attente', verifie: 'Vérifiés', refuse: 'Refusés' }[b.dataset.onglet] + ' (' + n + ')';
+    b.setAttribute('aria-pressed', b.dataset.onglet === onglet);
+  });
+  const liste = lignes.filter((l) => groupe(l) === onglet);
+  if (!liste.length) {
+    $('#liste').innerHTML = '<p class="vide">Aucun vendeur dans cette liste.</p>';
+    return;
+  }
+  $('#liste').innerHTML = liste.map((l) => {
+    const p = l.profil;
+    const nom = esc([p.first_name, p.last_name].filter(Boolean).join(' ') || 'Nom inconnu');
+    const photosOk = !l.documents_deleted_at && (l.cin_front_path || l.cin_back_path);
+    const decide = groupe(l) !== 'attente';
+    return `
+    <article class="vendeur" data-id="${esc(l.id)}">
+      <h2>${nom}</h2>
+      <dl>
+        <dt>Téléphone</dt><dd>${esc(p.phone || '—')}</dd>
+        <dt>N° CIN</dt><dd>${esc(l.cin_number || '—')}</dd>
+        <dt>Envoyé le</dt><dd>${quand(l.created_at)}</dd>
+        <dt>Consentement</dt><dd>${l.consent_given ? 'Donné' : 'Non donné'}</dd>
+        ${l.rejection_reason ? `<dt>Motif</dt><dd>${esc(l.rejection_reason)}</dd>` : ''}
+        ${decide ? `<dt>Décidé le</dt><dd>${quand(l.reviewed_at)}</dd>` : ''}
+      </dl>
+      <div class="actions">
+        ${photosOk ? '<button data-act="photos">Voir les photos CIN</button>' : ''}
+        ${!decide ? '<button class="ok" data-act="verifier">Vérifier</button><button class="non" data-act="refuser">Refuser</button>' : ''}
+        ${decide && photosOk ? '<button class="non" data-act="supprimer">Supprimer les photos</button>' : ''}
+      </div>
+      ${l.documents_deleted_at ? `<p class="etat">Photos supprimées le ${quand(l.documents_deleted_at)}.</p>` : ''}
+      <div class="photos"></div>
+    </article>`;
+  }).join('');
+}
+
+// ---------- Actions ----------
+document.querySelectorAll('.onglets button').forEach((b) =>
+  b.addEventListener('click', () => { onglet = b.dataset.onglet; dessiner(); }));
+
+$('#liste').addEventListener('click', async (e) => {
+  const bouton = e.target.closest('button[data-act]');
+  if (!bouton) return;
+  const carte = bouton.closest('.vendeur');
+  const l = lignes.find((x) => String(x.id) === carte.dataset.id);
+  if (!l) return;
+  dire('#msg-appli', '');
+  bouton.disabled = true;
+  try {
+    const act = bouton.dataset.act;
+    if (act === 'photos') await voirPhotos(l, carte.querySelector('.photos'));
+    if (act === 'verifier') await decider(l, true);
+    if (act === 'refuser') {
+      const motif = prompt('Motif du refus (visible par le vendeur) :');
+      if (motif === null) { bouton.disabled = false; return; }
+      await decider(l, false, motif.trim() || 'Documents non conformes');
+    }
+    if (act === 'supprimer') await supprimerPhotos(l);
+  } catch (err) {
+    dire('#msg-appli', 'Erreur : ' + (err.message || err));
+  }
+  bouton.disabled = false;
+});
+
+async function voirPhotos(l, zone) {
+  zone.innerHTML = '';
+  for (const [nom, chemin] of [['Recto', l.cin_front_path], ['Verso', l.cin_back_path]]) {
+    if (!chemin) continue;
+    const { data, error } = await db.storage.from(BUCKET).createSignedUrl(chemin, 300);
+    if (error) throw error;
+    zone.insertAdjacentHTML('beforeend',
+      `<img alt="CIN ${nom}" src="${esc(data.signedUrl)}">`);
+  }
+  zone.insertAdjacentHTML('beforeend', '<p>Ces liens expirent après 5 minutes.</p>');
+}
+
+async function decider(l, accepte, motif) {
+  const maj = {
+    status: accepte ? STATUT.verifie : STATUT.refuse,
+    rejection_reason: accepte ? null : motif,
+    reviewed_by: admin.id,
+    reviewed_at: new Date().toISOString()
+  };
+  const r1 = await db.from('seller_verifications').update(maj).eq('id', l.id);
+  if (r1.error) throw r1.error;
+  const r2 = await db.from('profiles').update({ is_verified: accepte }).eq('id', l.user_id);
+  if (r2.error) throw r2.error;
+  await charger();
+}
+
+async function supprimerPhotos(l) {
+  if (!confirm('Supprimer définitivement les photos CIN de ce vendeur ?')) return;
+  const chemins = [l.cin_front_path, l.cin_back_path].filter(Boolean);
+  const r1 = await db.storage.from(BUCKET).remove(chemins);
+  if (r1.error) throw r1.error;
+  const r2 = await db.from('seller_verifications')
+    .update({ documents_deleted_at: new Date().toISOString() }).eq('id', l.id);
+  if (r2.error) throw r2.error;
+  await charger();
+}
+
+demarrer();
 </script>
 </body>
 </html>
