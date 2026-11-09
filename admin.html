@@ -79,13 +79,23 @@
   </section>
 
   <section id="appli" hidden>
-    <div class="onglets" role="group" aria-label="Filtrer les vendeurs">
+    <div class="onglets" id="modes" role="group" aria-label="Section">
+      <button data-mode="vendeurs" aria-pressed="true">Vendeurs</button>
+      <button data-mode="paiements" aria-pressed="false">Paiements</button>
+    </div>
+    <div class="onglets" id="sous-vendeurs" role="group" aria-label="Filtrer les vendeurs">
       <button data-onglet="attente" aria-pressed="true">En attente</button>
       <button data-onglet="verifie" aria-pressed="false">Vérifiés</button>
       <button data-onglet="refuse" aria-pressed="false">Refusés</button>
     </div>
+    <div class="onglets" id="sous-pay" role="group" aria-label="Filtrer les paiements" hidden>
+      <button data-pay="attente" aria-pressed="true">En attente</button>
+      <button data-pay="confirme" aria-pressed="false">Confirmés</button>
+      <button data-pay="refuse" aria-pressed="false">Refusés</button>
+    </div>
     <p id="msg-appli" class="message" role="alert"></p>
     <div id="liste"></div>
+    <div id="liste-pay" hidden></div>
   </section>
 </main>
 
@@ -173,6 +183,7 @@ async function charger() {
   }
   lignes = v.map((x) => ({ ...x, profil: profils[x.user_id] || {} }));
   dessiner();
+  await chargerPaiements();
 }
 
 function groupe(l) {
@@ -182,7 +193,7 @@ function groupe(l) {
 }
 
 function dessiner() {
-  document.querySelectorAll('.onglets button').forEach((b) => {
+  document.querySelectorAll('#sous-vendeurs button').forEach((b) => {
     const n = lignes.filter((l) => groupe(l) === b.dataset.onglet).length;
     b.textContent = { attente: 'En attente', verifie: 'Vérifiés', refuse: 'Refusés' }[b.dataset.onglet] + ' (' + n + ')';
     b.setAttribute('aria-pressed', b.dataset.onglet === onglet);
@@ -220,7 +231,7 @@ function dessiner() {
 }
 
 // ---------- Actions ----------
-document.querySelectorAll('.onglets button').forEach((b) =>
+document.querySelectorAll('#sous-vendeurs button').forEach((b) =>
   b.addEventListener('click', () => { onglet = b.dataset.onglet; dessiner(); }));
 
 $('#liste').addEventListener('click', async (e) => {
@@ -283,6 +294,115 @@ async function supprimerPhotos(l) {
   if (r2.error) throw r2.error;
   await charger();
 }
+
+// ---------- Paiements MVola ----------
+let mode = 'vendeurs', ongletPay = 'attente', paiements = [];
+const ar = (n) => Number(n || 0).toLocaleString('fr-FR') + ' Ar';
+const groupePay = (p) => p.status === 'confirmed' ? 'confirme' : (p.status === 'rejected' ? 'refuse' : 'attente');
+
+async function chargerPaiements() {
+  const { data: p, error } = await db.from('payments').select('*').order('created_at', { ascending: false });
+  if (error) { dire('#msg-appli', 'Lecture des paiements impossible : ' + error.message); return; }
+  const ids = [...new Set(p.map((x) => x.seller_id))];
+  const profils = {};
+  if (ids.length) {
+    const { data: pr } = await db.from('profiles').select('id, first_name, last_name, phone').in('id', ids);
+    (pr || []).forEach((x) => { profils[x.id] = x; });
+  }
+  const plans = {};
+  const { data: pl } = await db.from('plans').select('*');
+  (pl || []).forEach((x) => { plans[x.code] = x; });
+  const abos = {};
+  const { data: sb } = await db.from('subscriptions').select('*');
+  (sb || []).forEach((x) => { abos[x.id] = x; });
+  paiements = p.map((x) => {
+    const abo = abos[x.subscription_id] || null;
+    return { ...x, profil: profils[x.seller_id] || {}, abo, plan: abo ? plans[abo.plan_code] : null };
+  });
+  majMode();
+}
+
+function majMode() {
+  $('#sous-vendeurs').hidden = mode !== 'vendeurs';
+  $('#sous-pay').hidden = mode !== 'paiements';
+  $('#liste').hidden = mode !== 'vendeurs';
+  $('#liste-pay').hidden = mode !== 'paiements';
+  const n = paiements.filter((p) => groupePay(p) === 'attente').length;
+  document.querySelectorAll('#modes button').forEach((b) => {
+    b.setAttribute('aria-pressed', b.dataset.mode === mode);
+    if (b.dataset.mode === 'paiements') b.textContent = 'Paiements (' + n + ')';
+  });
+  if (mode === 'vendeurs') dessiner(); else dessinerPay();
+}
+
+function dessinerPay() {
+  document.querySelectorAll('#sous-pay button').forEach((b) => {
+    const n = paiements.filter((p) => groupePay(p) === b.dataset.pay).length;
+    b.textContent = { attente: 'En attente', confirme: 'Confirmés', refuse: 'Refusés' }[b.dataset.pay] + ' (' + n + ')';
+    b.setAttribute('aria-pressed', b.dataset.pay === ongletPay);
+  });
+  const liste = paiements.filter((p) => groupePay(p) === ongletPay);
+  if (!liste.length) { $('#liste-pay').innerHTML = '<p class="vide">Aucun paiement dans cette liste.</p>'; return; }
+  $('#liste-pay').innerHTML = liste.map((x) => {
+    const p = x.profil;
+    const nom = esc([p.first_name, p.last_name].filter(Boolean).join(' ') || 'Nom inconnu');
+    const attente = groupePay(x) === 'attente';
+    return `
+    <article class="vendeur" data-id="${esc(x.id)}">
+      <h2>${nom}</h2>
+      <dl>
+        <dt>Téléphone</dt><dd>${esc(p.phone || '—')}</dd>
+        <dt>Forfait</dt><dd>${esc(x.plan ? x.plan.name : (x.abo ? x.abo.plan_code : '—'))}</dd>
+        <dt>Montant</dt><dd>${ar(x.amount_ar)}</dd>
+        <dt>Référence</dt><dd>${esc(x.mvola_reference || '—')}</dd>
+        <dt>Envoyé le</dt><dd>${quand(x.created_at)}</dd>
+        ${x.abo && x.abo.status === 'active' ? `<dt>Actif jusqu’au</dt><dd>${quand(x.abo.ends_at)}</dd>` : ''}
+      </dl>
+      ${attente ? `<div class="actions">
+        <button class="ok" data-act="confirmer">Confirmer</button>
+        <button class="non" data-act="refuser">Refuser</button>
+      </div>` : ''}
+    </article>`;
+  }).join('');
+}
+
+document.querySelectorAll('#modes button').forEach((b) =>
+  b.addEventListener('click', () => { mode = b.dataset.mode; majMode(); }));
+document.querySelectorAll('#sous-pay button').forEach((b) =>
+  b.addEventListener('click', () => { ongletPay = b.dataset.pay; dessinerPay(); }));
+
+$('#liste-pay').addEventListener('click', async (e) => {
+  const bouton = e.target.closest('button[data-act]');
+  if (!bouton) return;
+  const x = paiements.find((p) => String(p.id) === bouton.closest('.vendeur').dataset.id);
+  if (!x) return;
+  dire('#msg-appli', '');
+  bouton.disabled = true;
+  try {
+    if (bouton.dataset.act === 'confirmer') {
+      if (!confirm('Confirmer ce paiement de ' + ar(x.amount_ar) + ' ? L’abonnement sera activé.')) { bouton.disabled = false; return; }
+      const r1 = await db.from('payments').update({ status: 'confirmed' }).eq('id', x.id);
+      if (r1.error) throw r1.error;
+      if (x.subscription_id) {
+        const jours = (x.plan && x.plan.duration_days) || 30;
+        const debut = new Date();
+        const fin = new Date(debut.getTime() + jours * 86400000);
+        const r2 = await db.from('subscriptions')
+          .update({ status: 'active', starts_at: debut.toISOString(), ends_at: fin.toISOString() })
+          .eq('id', x.subscription_id);
+        if (r2.error) throw r2.error;
+      }
+    } else {
+      if (!confirm('Refuser ce paiement ?')) { bouton.disabled = false; return; }
+      const r = await db.from('payments').update({ status: 'rejected' }).eq('id', x.id);
+      if (r.error) throw r.error;
+    }
+    await chargerPaiements();
+  } catch (err) {
+    dire('#msg-appli', 'Erreur : ' + (err.message || err));
+    bouton.disabled = false;
+  }
+});
 
 demarrer();
 </script>
