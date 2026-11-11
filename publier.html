@@ -68,7 +68,9 @@ async function init(){
   me = session.user;
   const { data:v } = await sb.from("seller_verifications").select("status").eq("user_id", me.id).maybeSingle();
   if(!v || v.status !== "verified"){
-    say("Ton compte vendeur doit d'abord être vérifié (CIN) avant de publier.");
+    say("Ce compte n'est pas un vendeur vérifié. Connecte-toi avec un compte vendeur vérifié.");
+await sb.auth.signOut();
+$("login").classList.remove("hide");
     return;
   }
   $("login").classList.add("hide");
