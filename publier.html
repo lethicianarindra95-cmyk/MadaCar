@@ -137,7 +137,9 @@ $("btnPub").onclick = async () => {
     ["title","brand","model","year","km","price","city","phone","desc"].forEach(id => $(id).value = "");
     $("files").value = ""; $("prev").innerHTML = "";
   }catch(e){
-    say("Erreur : " + (e.message || e));
+    say(String(e.message || e).includes("row-level security")
+  ? "Il faut un compte vérifié et un abonnement actif pour publier."
+  : "Erreur : " + (e.message || e));
   }
   $("btnPub").disabled = false;
 };
