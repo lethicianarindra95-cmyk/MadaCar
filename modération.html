@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MadaCar – Modération</title>
+<style>
+  :root { --bg:#111; --card:#1c1c1c; --line:#333; --txt:#eee; --mut:#999; --ok:#2e9e5b; --ko:#c0392b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif; padding:14px; }
+  h1 { font-size:20px; margin:0 0 12px; }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tabs button { flex:1; padding:10px; border:1px solid var(--line); background:var(--card); color:var(--txt); border-radius:8px; font-size:14px; }
+  .tabs button.on { background:#444; border-color:#777; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:12px; }
+  .card h3 { margin:0 0 6px; font-size:16px; }
+  .price { color:#fff; font-weight:700; margin-bottom:6px; }
+  .meta { color:var(--mut); font-size:13px; line-height:1.5; }
+  .desc { margin:8px 0; font-size:14px; white-space:pre-wrap; }
+  .photos { display:flex; gap:6px; overflow-x:auto; margin:8px 0; }
+  .photos img { height:90px; border-radius:6px; border:1px solid var(--line); }
+  .badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; background:#333; margin-left:6px; }
+  .row { display:flex; gap:8px; margin-top:10px; }
+  .row button { flex:1; padding:11px; border:0; border-radius:8px; color:#fff; font-size:14px; }
+  .ok { background:var(--ok); } .ko { background:var(--ko); }
+  input, textarea { width:100%; padding:10px; margin-bottom:8px; background:#222; border:1px solid var(--line); color:var(--txt); border-radius:8px; font-size:14px; }
+  .btn { width:100%; padding:11px; border:0; border-radius:8px; background:#555; color:#fff; font-size:15px; }
+  #msg { color:#e6b800; font-size:13px; margin:8px 0; }
+  .hide { display:none; }
+</style>
+</head>
+<body>
+<h1>Modération des annonces</h1>
+<div id="msg"></div>
+
+<div id="login" class="hide">
+  <input id="email" type="email" placeholder="Email admin">
+  <input id="pass" type="password" placeholder="Mot de passe">
+  <button class="btn" id="btnLogin">Connexion</button>
+</div>
+
+<div id="app" class="hide">
+  <div class="tabs">
+    <button data-s="pending" class="on">En attente</button>
+    <button data-s="approved">Acceptées</button>
+    <button data-s="rejected">Refusées</button>
+  </div>
+  <div id="list"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://cpdksgligvxukghiform.supabase.co";
+const SUPABASE_KEY = "COLLE_TA_CLE_PUBLISHABLE_ICI";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+let me = null, current = "pending";
+
+function say(t){ $("msg").textContent = t || ""; }
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ $("login").classList.remove("hide"); return; }
+  me = session.user;
+  const { data:p, error } = await sb.from("profiles").select("role").eq("id", me.id).single();
+  if(error || !p || p.role !== "admin"){ say("Accès réservé à l'admin."); return; }
+  $("login").classList.add("hide");
+  $("app").classList.remove("hide");
+  load();
+}
+
+$("btnLogin").onclick = async () => {
+  say("Connexion...");
+  const { error } = await sb.auth.signInWithPassword({ email:$("email").value.trim(), password:$("pass").value });
+  if(error){ say("Erreur : " + error.message); return; }
+  say(""); init();
+};
+
+document.querySelectorAll(".tabs button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on"); current = b.dataset.s; load();
+  };
+});
+
+function photoUrl(p){
+  if(!p) return null;
+  if(/^https?:\/\//.test(p)) return p;
+  return sb.storage.from("listing-photos").getPublicUrl(p).data.publicUrl;
+}
+
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(text !== undefined) e.textContent = text;
+  return e;
+}
+
+async function load(){
+  say("Chargement...");
+  const { data, error } = await sb.from("listings").select("*").eq("status", current).order("created_at", { ascending:false });
+  if(error){ say("Erreur : " + error.message); return; }
+  say(data.length ? "" : "Aucune annonce.");
+  const list = $("list"); list.innerHTML = "";
+  data.forEach(l => list.appendChild(card(l)));
+}
+
+function card(l){
+  const c = el("div","card");
+  const h = el("h3","", l.title || "(sans titre)");
+  h.appendChild(el("span","badge", l.source));
+  c.appendChild(h);
+  c.appendChild(el("div","price", Number(l.price_ar).toLocaleString("fr-FR") + " Ar"));
+  c.appendChild(el("div","meta",
+    [l.brand, l.model, l.year, l.mileage_km != null ? l.mileage_km.toLocaleString("fr-FR") + " km" : null, l.city].filter(Boolean).join(" · ")));
+  c.appendChild(el("div","meta","Contact : " + (l.contact_phone || "—")));
+  if(l.source_url) c.appendChild(el("div","meta","Source : " + l.source_url));
+  if(l.description) c.appendChild(el("div","desc", l.description));
+  if(Array.isArray(l.photos) && l.photos.length){
+    const ph = el("div","photos");
+    l.photos.forEach(p => { const u = photoUrl(p); if(u){ const i = document.createElement("img"); i.src = u; i.loading = "lazy"; ph.appendChild(i); } });
+    c.appendChild(ph);
+  }
+  if(l.status === "rejected" && l.rejection_reason) c.appendChild(el("div","meta","Motif : " + l.rejection_reason));
+
+  if(l.status !== "approved" || true){
+    const row = el("div","row");
+    if(l.status !== "approved"){
+      const a = el("button","ok","Accepter");
+      a.onclick = () => review(l.id, "approved", null);
+      row.appendChild(a);
+    }
+    if(l.status !== "rejected"){
+      const r = el("button","ko","Refuser");
+      r.onclick = () => {
+        const reason = prompt("Motif du refus :");
+        if(reason === null) return;
+        review(l.id, "rejected", reason.trim() || "Non précisé");
+      };
+      row.appendChild(r);
+    }
+    c.appendChild(row);
+  }
+  return c;
+}
+
+async function review(id, status, reason){
+  say("Enregistrement...");
+  const { error } = await sb.from("listings").update({
+    status, rejection_reason: reason, reviewed_at: new Date().toISOString(), reviewed_by: me.id
+  }).eq("id", id);
+  if(error){ say("Erreur : " + error.message); return; }
+  load();
+}
+
+init();
+</script>
+</body>
+</html>
