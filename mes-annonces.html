@@ -59,4 +59,64 @@ const SUPABASE_URL='https://cpdksgligvxukghiform.supabase.co';
 const sb=supabase.createClient(SUPABASE_URL,'sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1');
 let user=null,subActive=false;
 const msg=t=>document.getElementById('msg').textContent=t||'';
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const photoUrl=p=>/^https?:/.test(p)?p:`${SUPABASE_URL}/storage/v1/object/public/listing-photos/${p}`;
+const fmt=d=>new Date(d).toLocaleDateString('fr-FR');
+
+async function init(){
+  const {data}=await sb.auth.getSession();
+  if(data.session){user=data.session.user;start()}
+}
+async function login(){
+  msg('Connexion...');
+  const {data,error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:pwd.value});
+  if(error){msg('Erreur : '+error.message);return}
+  user=data.user;msg('');start();
+}
+async function start(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  await loadSub();await loadList();
+}
+async function loadSub(){
+  const box=document.getElementById('sub');
+  const {data,error}=await sb.from('subscriptions').select('plan_code,status,ends_at').eq('seller_id',user.id).order('ends_at',{ascending:false}).limit(1);
+  if(error||!data||!data.length){box.innerHTML='Aucun abonnement. <a href="abonnement.html" style="color:#fff">Choisir un forfait</a>';return}
+  const s=data[0];
+  subActive=s.status==='active'&&(!s.ends_at||new Date(s.ends_at)>new Date());
+  box.innerHTML=subActive
+    ?`Abonnement ${esc(s.plan_code)} actif jusqu'au ${s.ends_at?fmt(s.ends_at):'-'}.`
+    :`Abonnement ${esc(s.plan_code)} expiré ou inactif. Tes annonces sont masquées. <a href="abonnement.html" style="color:#fff">Renouveler</a>`;
+}
+async function loadList(){
+  const {data,error}=await sb.from('listings').select('*').eq('seller_id',user.id).order('created_at',{ascending:false});
+  const box=document.getElementById('list');
+  if(error){box.innerHTML='<div class="empty">Erreur : '+esc(error.message)+'</div>';return}
+  if(!data.length){box.innerHTML='<div class="empty">Aucune annonce. <a href="publier.html" style="color:#fff">Publier une annonce</a></div>';return}
+  box.innerHTML=data.map(i=>{
+    const ph=(i.photos||[]).map(photoUrl)[0];
+    let st='';
+    if(i.status==='approved')st='<span class="st ok">Acceptée</span>'+(subActive?'':'<div class="warn">Masquée : abonnement expiré.</div>');
+    else if(i.status==='rejected')st='<span class="st no">Refusée</span>'+(i.rejection_reason?`<div class="reason">Motif : ${esc(i.rejection_reason)}</div>`:'');
+    else st='<span class="st wait">En attente de validation</span>';
+    return `<div class="card">
+      ${ph?`<img src="${esc(ph)}" alt="">`:''}
+      <div class="info">
+        <div class="price">${Number(i.price_ar).toLocaleString('fr-FR')} Ar</div>
+        <div>${esc(i.title)}</div>
+        <div class="meta">Publiée le ${fmt(i.created_at)}</div>
+        ${st}
+        <button class="danger" style="margin-top:12px" onclick="del('${i.id}')">Supprimer</button>
+      </div>
+    </div>`}).join('');
+}
+async function del(id){
+  if(!confirm('Supprimer cette annonce définitivement ?'))return;
+  const {error}=await sb.from('listings').delete().eq('id',id);
+  if(error){msg('Erreur : '+error.message);return}
+  msg('Annonce supprimée.');loadList();
+}
+init();
+</script>
+</body>
+</html>
