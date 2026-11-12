@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MadaCar - Mes annonces</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:#1a1a1a;color:#eee}
+nav{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:#000}
+nav a{color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font-size:14px}
+main{padding:12px}
+h1{font-size:20px;margin:6px 0 12px}
+input,button{width:100%;padding:12px;margin-bottom:8px;border-radius:8px;border:1px solid #444;font-size:15px}
+input{background:#2a2a2a;color:#eee}
+button{background:#eee;color:#000;font-weight:600}
+button.danger{background:#b3261e;color:#fff;border-color:#b3261e}
+.sub{background:#2a2a2a;border-radius:10px;padding:12px;margin-bottom:12px;font-size:14px}
+.card{background:#2a2a2a;border-radius:12px;overflow:hidden;margin-bottom:12px}
+.card img{width:100%;height:160px;object-fit:cover;display:block;background:#444}
+.info{padding:12px}
+.price{font-size:17px;font-weight:600}
+.meta{color:#aaa;font-size:13px;margin-top:4px}
+.st{display:inline-block;border-radius:20px;padding:3px 12px;font-size:13px;margin-top:8px;border:1px solid #777}
+.st.ok{background:#1f3d26;border-color:#3f8f55}
+.st.no{background:#4a1f1c;border-color:#b3261e}
+.st.wait{background:#3d3517;border-color:#b8962e}
+.reason{margin-top:8px;font-size:14px;color:#f3b5b0}
+.warn{margin-top:8px;font-size:13px;color:#f5c542}
+.empty{text-align:center;color:#aaa;padding:30px}
+#msg{color:#f5c542;font-size:14px;margin:8px 0}
+#app{display:none}
+</style>
+</head>
+<body>
+<nav>
+  <a href="annonces.html">Annonces</a>
+  <a href="publier.html">Publier</a>
+  <a href="abonnement.html">Abonnement</a>
+  <a href="mes-annonces.html">Mes annonces</a>
+</nav>
+<main>
+<h1>Mes annonces</h1>
+<div id="login">
+  <input id="email" type="email" placeholder="Email">
+  <input id="pwd" type="password" placeholder="Mot de passe">
+  <button onclick="login()">Connexion</button>
+</div>
+<div id="app">
+  <div class="sub" id="sub"></div>
+  <div id="list"></div>
+</div>
+<div id="msg"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://cpdksgligvxukghiform.supabase.co';
+const sb=supabase.createClient(SUPABASE_URL,'sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1');
+let user=null,subActive=false;
+const msg=t=>document.getElementById('msg').textContent=t||'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','
