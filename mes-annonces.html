@@ -32,7 +32,50 @@ button.danger{background:#b3261e;color:#fff;border-color:#b3261e}
 #app{display:none}
 </style>
 </head>
-<body>
+<div id="rappel-abo"></div>
+<script>
+(async () => {
+  const sb = window.supabase.createClient(
+    'https://cpdksgligvxukghiform.supabase.co',
+    'COLLE_TA_CLE'
+  );
+  const box = document.getElementById('rappel-abo');
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+
+  const { data } = await sb.from('subscriptions')
+    .select('plan_code, ends_at')
+    .eq('seller_id', user.id)
+    .eq('status', 'active')
+    .order('ends_at', { ascending: false })
+    .limit(1);
+
+  const s = data && data[0];
+  let msg = '', rouge = false;
+
+  if (!s) {
+    msg = 'Aucun abonnement actif : tes annonces sont masquées aux acheteurs.';
+    rouge = true;
+  } else {
+    const jours = Math.ceil((new Date(s.ends_at) - new Date()) / 86400000);
+    if (jours <= 0) {
+      msg = 'Ton abonnement a expiré : tes annonces sont masquées.';
+      rouge = true;
+    } else if (jours <= 5) {
+      msg = 'Ton abonnement expire dans ' + jours + ' jour' + (jours > 1 ? 's' : '') + '.';
+    }
+  }
+  if (!msg) return;
+
+  box.innerHTML =
+    '<div style="margin:12px;padding:14px;border-radius:10px;background:#1a1a1a;' +
+    'border:2px solid ' + (rouge ? '#e5484d' : '#f5a623') + ';color:#fff;">' +
+    '<div style="margin-bottom:10px;">' + msg + '</div>' +
+    '<a href="abonnement.html" style="display:inline-block;padding:10px 16px;' +
+    'background:#f5a623;color:#000;border-radius:8px;text-decoration:none;font-weight:bold;">' +
+    'Renouveler mon abonnement</a></div>';
+})();
+</script><body>
 <nav>
   <a href="annonces.html">Annonces</a>
   <a href="publier.html">Publier</a>
