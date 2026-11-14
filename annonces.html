@@ -130,6 +130,30 @@ function openDetail(l){
   d.scrollTop = 0;
 }
 
+async function openFromLink(){
+  const id = new URLSearchParams(location.search).get("id");
+  if(!id) return;
+  let l = all.find(x => x.id === id);
+  if(!l){
+    const { data } = await sb.from("listings")
+      .select("id,title,description,price_ar,brand,model,year,mileage_km,city,contact_phone,photos,source,source_url,created_at")
+      .eq("id", id).eq("status", "approved").maybeSingle();
+    l = data;
+  }
+  if(l) openDetail(l); else $("msg").textContent = "Cette annonce n'est plus disponible.";
+}
+
+async function partager(l){
+  const url = location.origin + location.pathname + "?id=" + l.id;
+  const texte = l.title + " – " + ar(l.price_ar) + " sur MadaCar";
+  if(navigator.share){
+    try{ await navigator.share({ title: l.title, text: texte, url: url }); return; }
+    catch(e){ if(e && e.name === "AbortError") return; }
+  }
+  try{ await navigator.clipboard.writeText(url); alert("Lien copié : " + url); }
+  catch(e){ prompt("Copie ce lien :", url); }
+}
+
 $("q").oninput = render;
 $("max").oninput = render;
 load();
