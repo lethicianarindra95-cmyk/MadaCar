@@ -84,6 +84,25 @@ async function start(){
 }
 async function loadSub(){
   const box=document.getElementById('sub');
+  const rap=document.getElementById('rappel-abo');
+  rap.innerHTML='';
+  const {data,error}=await sb.from('subscriptions').select('plan_code,status,ends_at').eq('seller_id',user.id).order('ends_at',{ascending:false,nullsFirst:false}).limit(1);
+  if(error||!data||!data.length){box.innerHTML='Aucun abonnement. <a href="abonnement.html" style="color:#fff">Choisir un forfait</a>';return}
+  const s=data[0];
+  subActive=s.status==='active'&&(!s.ends_at||new Date(s.ends_at)>new Date());
+  box.innerHTML=subActive
+    ?`Abonnement ${esc(s.plan_code)} actif jusqu'au ${s.ends_at?fmt(s.ends_at):'-'}.`
+    :`Abonnement ${esc(s.plan_code)} expiré ou inactif. Tes annonces sont masquées.`;
+  let texte='',rouge=false;
+  if(!subActive){texte='Ton abonnement a expiré : tes annonces sont masquées aux acheteurs.';rouge=true}
+  else if(s.ends_at){
+    const j=Math.ceil((new Date(s.ends_at)-new Date())/86400000);
+    if(j<=5)texte='Ton abonnement expire dans '+j+' jour'+(j>1?'s':'')+'.';
+  }
+  if(texte)rap.innerHTML=`<div class="rappel ${rouge?'rouge':''}"><div>${texte}</div><a href="abonnement.html">Renouveler mon abonnement</a></div>`;
+}
+async function loadSubb0ld(){
+  const box=document.getElementById('sub');
   const {data,error}=await sb.from('subscriptions').select('plan_code,status,ends_at').eq('seller_id',user.id).order('ends_at',{ascending:false}).limit(1);
   if(error||!data||!data.length){box.innerHTML='Aucun abonnement. <a href="abonnement.html" style="color:#fff">Choisir un forfait</a>';return}
   const s=data[0];
