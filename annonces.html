@@ -75,7 +75,7 @@ async function load(){
     .select("id,title,description,price_ar,brand,model,year,mileage_km,city,contact_phone,photos,source,source_url,created_at")
     .eq("status", "approved").order("created_at", { ascending:false }).limit(60);
   if(error){ $("msg").textContent = "Erreur : " + error.message; return; }
-  all = data; render();
+ all = data; render(); openFromLink(); 
 }
 
 function render(){
