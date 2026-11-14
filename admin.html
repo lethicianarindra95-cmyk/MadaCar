@@ -385,8 +385,14 @@ $('#liste-pay').addEventListener('click', async (e) => {
       if (r1.error) throw r1.error;
       if (x.subscription_id) {
         const jours = (x.plan && x.plan.duration_days) || 30;
-        const debut = new Date();
-        const fin = new Date(debut.getTime() + jours * 86400000);
+        const maintenant = new Date();
+const { data: encours, error: e0 } = await db.from('subscriptions')
+  .select('ends_at').eq('seller_id', x.seller_id).eq('status', 'active')
+  .neq('id', x.subscription_id).gt('ends_at', maintenant.toISOString())
+  .order('ends_at', { ascending: false }).limit(1);
+if (e0) throw e0;
+const debut = encours && encours.length ? new Date(encours[0].ends_at) : maintenant;
+const fin = new Date(debut.getTime() + jours * 86400000);
         const r2 = await db.from('subscriptions')
           .update({ status: 'active', starts_at: debut.toISOString(), ends_at: fin.toISOString() })
           .eq('id', x.subscription_id);
