@@ -69,15 +69,26 @@ function waNumber(phone){
   return d;
 }
 
+
 async function load(){
   $("msg").textContent = "Chargement...";
   const { data, error } = await sb.from("listings")
-    .select("id,title,description,price_ar,brand,model,year,mileage_km,city,contact_phone,photos,source,source_url,created_at")
-    .eq("status", "approved").order("created_at", { ascending:false }).limit(60);
+    .select("id,seller_id,title,description,price_ar,brand,model,year,mileage_km,city,contact_phone,photos,source,source_url,created_at")
+    .eq("status", "approved").order("created_at", { ascending:false }).limit(200);
   if(error){ $("msg").textContent = "Erreur : " + error.message; return; }
- all = data; render(); openFromLink(); 
-}
 
+  const { data: plans } = await sb.from("seller_plan").select("seller_id,plan_code,plan_rank");
+  const map = {};
+  (plans || []).forEach(p => { map[p.seller_id] = p; });
+  data.forEach(l => {
+    const p = map[l.seller_id];
+    l.plan_code = p ? p.plan_code : null;
+    l.plan_rank = p ? p.plan_rank : 3;
+  });
+  data.sort((a, b) => a.plan_rank - b.plan_rank || new Date(b.created_at) - new Date(a.created_at));
+
+  all = data; render(); openFromLink();
+}
 function render(){
   const q = $("q").value.trim().toLowerCase();
   const max = parseInt($("max").value);
