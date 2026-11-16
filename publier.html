@@ -16,6 +16,7 @@
   .btn { width:100%; padding:13px; margin-top:16px; border:0; border-radius:8px; background:#555; color:#fff; font-size:16px; }
   .btn:disabled { opacity:.5; }
   #msg { margin:10px 0; font-size:14px; color:#e6b800; }
+  #plan { margin:8px 0; padding:10px 12px; background:#1c1c1c; border:1px solid var(--line); border-radius:8px; font-size:14px; }
   #prev { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   #prev img { height:70px; border-radius:6px; border:1px solid var(--line); }
   .hide { display:none; }
@@ -37,6 +38,7 @@
 </div>
 
 <div id="app" class="hide">
+  <div id="plan"></div>
   <label>Titre *</label><input id="title" maxlength="100" placeholder="Ex : Toyota Corolla 2012">
   <div class="two">
     <div><label>Marque *</label><input id="brand"></div>
@@ -52,7 +54,7 @@
     <div><label>Téléphone *</label><input id="phone" type="tel"></div>
   </div>
   <label>Description</label><textarea id="desc"></textarea>
-  <label>Photos (jusqu'à 5)</label>
+  <label id="lblPhotos">Photos</label>
   <input id="files" type="file" accept="image/*" multiple>
   <div id="prev"></div>
   <button class="btn" id="btnPub">Envoyer pour validation</button>
@@ -65,7 +67,34 @@ const SUPABASE_KEY ="sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 let me = null;
+let planCode = "basic";
+let maxAds = 3, maxPhotos = 3;
+let activeAds = 0;
 function say(t){ $("msg").textContent = t || ""; }
+
+const LIMITS = {
+  vip:     { name:"VIP",     ads:1000, photos:10 },
+  premium: { name:"Premium", ads:10,   photos:6 },
+  basic:   { name:"Basique", ads:3,    photos:3 }
+};
+
+async function countAds(){
+  const { count } = await sb.from("listings")
+    .select("id", { count:"exact", head:true })
+    .eq("seller_id", me.id).in("status", ["pending","approved"]);
+  return count || 0;
+}
+
+async function loadPlan(){
+  const { data } = await sb.from("seller_plan").select("plan_code").eq("seller_id", me.id).maybeSingle();
+  planCode = (data && LIMITS[data.plan_code]) ? data.plan_code : "basic";
+  maxAds = LIMITS[planCode].ads;
+  maxPhotos = LIMITS[planCode].photos;
+  activeAds = await countAds();
+  const ads = maxAds >= 1000 ? activeAds + " annonce(s) active(s), sans limite" : activeAds + "/" + maxAds + " annonces actives";
+  $("plan").textContent = "Forfait " + LIMITS[planCode].name + " : " + ads + ", jusqu'à " + maxPhotos + " photos par annonce.";
+  $("lblPhotos").textContent = "Photos (jusqu'à " + maxPhotos + ")";
+}
 
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
@@ -74,10 +103,11 @@ async function init(){
   const { data:v } = await sb.from("seller_verifications").select("status").eq("user_id", me.id).maybeSingle();
   if(!v || v.status !== "verified"){
     say("Ce compte n'est pas un vendeur vérifié. Connecte-toi avec un compte vendeur vérifié.");
-await sb.auth.signOut();
-$("login").classList.remove("hide");
+    await sb.auth.signOut();
+    $("login").classList.remove("hide");
     return;
   }
+  await loadPlan();
   $("login").classList.add("hide");
   $("app").classList.remove("hide");
 }
@@ -91,7 +121,14 @@ $("btnLogin").onclick = async () => {
 
 $("files").onchange = () => {
   const box = $("prev"); box.innerHTML = "";
-  [...$("files").files].slice(0,5).forEach(f => {
+  let files = [...$("files").files];
+  if(files.length > maxPhotos){
+    say("Ton forfait " + LIMITS[planCode].name + " permet " + maxPhotos + " photo(s) par annonce. Choisis-en " + maxPhotos + " maximum.");
+    $("files").value = "";
+    return;
+  }
+  say("");
+  files.forEach(f => {
     const i = document.createElement("img"); i.src = URL.createObjectURL(f); box.appendChild(i);
   });
 };
@@ -119,11 +156,20 @@ $("btnPub").onclick = async () => {
   if(!title || !brand || !model || !city || !phone || !year || isNaN(km) || !price){
     say("Remplis tous les champs marqués *."); return;
   }
-  const files = [...$("files").files].slice(0,5);
+  const files = [...$("files").files];
   if(!files.length){ say("Ajoute au moins une photo."); return; }
+  if(files.length > maxPhotos){
+    say("Ton forfait " + LIMITS[planCode].name + " permet " + maxPhotos + " photo(s) par annonce."); return;
+  }
 
   $("btnPub").disabled = true;
   try{
+    activeAds = await countAds();
+    if(activeAds >= maxAds){
+      say("Limite atteinte : ton forfait " + LIMITS[planCode].name + " permet " + maxAds + " annonce(s) active(s). Supprime une annonce ou passe à un forfait supérieur.");
+      $("btnPub").disabled = false;
+      return;
+    }
     const paths = [];
     for(let i = 0; i < files.length; i++){
       say("Envoi de la photo " + (i+1) + "/" + files.length + "...");
@@ -140,9 +186,10 @@ $("btnPub").onclick = async () => {
       photos: paths, source: "personal", status: "pending"
     });
     if(error) throw error;
-    say("Annonce envoyée. Elle sera visible après validation par l'équipe MadaCar.");
     ["title","brand","model","year","km","price","city","phone","desc"].forEach(id => $(id).value = "");
     $("files").value = ""; $("prev").innerHTML = "";
+    await loadPlan();
+    say("Annonce envoyée. Elle sera visible après validation par l'équipe MadaCar.");
   }catch(e){
     say(String(e.message || e).includes("row-level security")
   ? "Il faut un compte vérifié et un abonnement actif pour publier."
