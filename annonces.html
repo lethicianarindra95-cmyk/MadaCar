@@ -21,6 +21,10 @@
   .price { font-weight:700; margin-bottom:4px; }
   .meta { color:var(--mut); font-size:13px; }
   .badge { display:inline-block; margin-top:6px; font-size:12px; padding:3px 8px; border-radius:10px; background:#333; }
+  .badges { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .badges .badge { margin-top:0; }
+  .badge.vip { background:#e6b800; color:#111; font-weight:700; }
+  .badge.premium { background:#c0c0c0; color:#111; font-weight:700; }
   #detail { position:fixed; inset:0; background:var(--bg); overflow-y:auto; padding:14px; }
   .hide { display:none; }
   .back { background:#333; color:#fff; border:0; padding:10px 14px; border-radius:8px; font-size:14px; margin-bottom:12px; }
@@ -69,6 +73,13 @@ function waNumber(phone){
   return d;
 }
 
+function badges(l){
+  const b = el("div","badges");
+  if(l.plan_code === "vip") b.appendChild(el("span","badge vip","★ VIP"));
+  else if(l.plan_code === "premium") b.appendChild(el("span","badge premium","★ Premium"));
+  if(l.source === "personal") b.appendChild(el("span","badge","✔ Vendeur vérifié MadaCar"));
+  return b;
+}
 
 async function load(){
   $("msg").textContent = "Chargement...";
@@ -109,7 +120,8 @@ function card(l){
   info.appendChild(el("h3","", l.title));
   info.appendChild(el("div","price", ar(l.price_ar)));
   info.appendChild(el("div","meta", [l.year, l.mileage_km != null ? Number(l.mileage_km).toLocaleString("fr-FR") + " km" : null, l.city].filter(Boolean).join(" · ")));
-  if(l.source === "personal") info.appendChild(el("div","badge","✔ Vendeur vérifié MadaCar"));
+  const b = badges(l);
+  if(b.children.length) info.appendChild(b);
   c.appendChild(info);
   c.onclick = () => openDetail(l);
   return c;
@@ -126,7 +138,8 @@ function openDetail(l){
   d.appendChild(el("h2","", l.title));
   d.appendChild(el("div","price", ar(l.price_ar)));
   d.appendChild(el("div","meta", [l.brand, l.model, l.year, l.mileage_km != null ? Number(l.mileage_km).toLocaleString("fr-FR") + " km" : null, l.city].filter(Boolean).join(" · ")));
-  if(l.source === "personal") d.appendChild(el("div","badge","✔ Vendeur vérifié MadaCar"));
+  const b = badges(l);
+  if(b.children.length) d.appendChild(b);
   if(l.description) d.appendChild(el("div","desc", l.description));
   if(l.contact_phone){
     const row = el("div","row");
