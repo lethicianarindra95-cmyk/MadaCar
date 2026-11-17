@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MadaCar – Vendez votre voiture à Madagascar</title>
+<style>
+  :root { --bg:#111; --card:#1c1c1c; --line:#333; --txt:#eee; --mut:#999; --gold:#e6b800; --silver:#c0c0c0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif; padding:14px; line-height:1.45; }
+  h1 { font-size:26px; margin:18px 0 8px; }
+  h2 { font-size:19px; margin:26px 0 12px; }
+  p { margin:0 0 10px; color:var(--mut); font-size:15px; }
+  .btns { display:flex; gap:8px; margin:14px 0 4px; }
+  .btn { flex:1; text-align:center; padding:14px 10px; border-radius:8px; color:#fff; text-decoration:none; font-size:15px; font-weight:600; }
+  .b1 { background:#555; } .b2 { background:#1f9d55; }
+  .steps { display:grid; gap:10px; }
+  .step { display:flex; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .num { flex:none; width:30px; height:30px; border-radius:50%; background:#333; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .step b { display:block; margin-bottom:2px; }
+  .step span { color:var(--mut); font-size:14px; }
+  .plans { display:grid; gap:12px; }
+  .plan { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .plan.premium { border-color:var(--silver); }
+  .plan.vip { border-color:var(--gold); box-shadow:0 0 0 1px rgba(230,184,0,.35); }
+  .plan h3 { margin:0 0 2px; font-size:19px; }
+  .tag { display:inline-block; font-size:12px; padding:3px 8px; border-radius:10px; font-weight:700; margin-bottom:8px; }
+  .tag.vip { background:var(--gold); color:#111; }
+  .tag.premium { background:var(--silver); color:#111; }
+  .price { font-size:24px; font-weight:800; margin:4px 0 10px; }
+  .price small { font-size:13px; font-weight:400; color:var(--mut); }
+  .plan ul { list-style:none; margin:0 0 12px; padding:0; }
+  .plan li { padding:5px 0; font-size:14.5px; border-top:1px solid #262626; }
+  .plan li:first-child { border-top:0; }
+  .plan a { display:block; text-align:center; padding:12px; border-radius:8px; color:#fff; text-decoration:none; background:#555; font-size:15px; }
+  .plan.vip a { background:var(--gold); color:#111; font-weight:700; }
+  .plan.premium a { background:var(--silver); color:#111; font-weight:700; }
+  .note { margin-top:20px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:10px; font-size:14px; color:var(--mut); }
+  .foot { text-align:center; color:#666; font-size:13px; margin:26px 0 8px; }
+</style>
+</head>
+<body><nav style="display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:#000;position:sticky;top:0;z-index:50">
+  <a href="accueil.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Accueil</a>
+  <a href="annonces.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Annonces</a>
+  <a href="publier.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Publier</a>
+  <a href="abonnement.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Abonnement</a>
+  <a href="mes-annonces.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Mes annonces</a>
+  <a href="index.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Inscription vendeur</a>
+</nav>
+
+<h1>Vendez votre voiture sur MadaCar</h1>
+<p>Des annonces de vendeurs vérifiés, partout à Madagascar. Gratuit pour les acheteurs.</p>
+<div class="btns">
+  <a class="btn b2" href="index.html">Devenir vendeur</a>
+  <a class="btn b1" href="annonces.html">Voir les annonces</a>
+</div>
+
+<h2>Comment ça marche</h2>
+<div class="steps">
+  <div class="step"><div class="num">1</div><div><b>Inscris-toi comme vendeur</b><span>Envoie ta CIN pour obtenir le badge « Vendeur vérifié MadaCar ». Tes documents ne sont jamais visibles des acheteurs.</span></div></div>
+  <div class="step"><div class="num">2</div><div><b>Choisis ton forfait</b><span>Paie par MVola et envoie ta référence de paiement. Elle est vérifiée par l'équipe MadaCar.</span></div></div>
+  <div class="step"><div class="num">3</div><div><b>Publie tes annonces</b><span>Ajoute tes photos et tes informations, puis envoie l'annonce pour validation.</span></div></div>
+  <div class="step"><div class="num">4</div><div><b>Sois contacté</b><span>Les acheteurs t'appellent ou t'écrivent sur WhatsApp directement depuis ton annonce.</span></div></div>
+</div>
+
+<h2>Nos forfaits vendeurs</h2>
+<div class="plans">
+  <div class="plan">
+    <h3>Basique</h3>
+    <div class="price">10 000 Ar <small>/ 30 jours</small></div>
+    <ul>
+      <li>3 annonces actives</li>
+      <li>3 photos par annonce</li>
+      <li>Badge « Vendeur vérifié »</li>
+    </ul>
+    <a href="abonnement.html">Choisir Basique</a>
+  </div>
+
+  <div class="plan premium">
+    <span class="tag premium">★ Premium</span>
+    <h3>Premium</h3>
+    <div class="price">25 000 Ar <small>/ 30 jours</small></div>
+    <ul>
+      <li>10 annonces actives</li>
+      <li>6 photos par annonce</li>
+      <li>Badge ★ Premium sur tes annonces</li>
+      <li>Tes annonces passent avant celles du Basique</li>
+    </ul>
+    <a href="abonnement.html">Choisir Premium</a>
+  </div>
+
+  <div class="plan vip">
+    <span class="tag vip">★ VIP</span>
+    <h3>VIP</h3>
+    <div class="price">40 000 Ar <small>/ 30 jours</small></div>
+    <ul>
+      <li>Annonces illimitées</li>
+      <li>10 photos par annonce</li>
+      <li>Badge ★ VIP sur tes annonces</li>
+      <li>Tes annonces en tête de liste</li>
+      <li>Section « ★ À la une » en haut de la page des annonces</li>
+    </ul>
+    <a href="abonnement.html">Choisir VIP</a>
+  </div>
+</div>
+
+<div class="note">Paiement par MVola. Ton abonnement est activé dès que le paiement est confirmé. Tu peux le renouveler à tout moment : les 30 jours s'ajoutent à la fin de ton abonnement actuel.</div>
+
+<div class="foot">MadaCar – Annonces automobiles à Madagascar</div>
+</body>
+</html>
