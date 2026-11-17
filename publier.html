@@ -17,8 +17,10 @@
   .btn:disabled { opacity:.5; }
   #msg { margin:10px 0; font-size:14px; color:#e6b800; }
   #plan { margin:8px 0; padding:10px 12px; background:#1c1c1c; border:1px solid var(--line); border-radius:8px; font-size:14px; }
-  #prev { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
-  #prev img { height:70px; border-radius:6px; border:1px solid var(--line); }
+  #prev { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .th { position:relative; }
+  .th img { height:70px; border-radius:6px; border:1px solid var(--line); display:block; }
+  .rm { position:absolute; top:3px; right:3px; width:22px; height:22px; padding:0; border:0; border-radius:50%; background:rgba(0,0,0,.75); color:#fff; font-size:12px; }
   .hide { display:none; }
 </style>
 </head>
@@ -70,6 +72,7 @@ let me = null;
 let planCode = "basic";
 let maxAds = 3, maxPhotos = 3;
 let activeAds = 0;
+let chosen = [];
 function say(t){ $("msg").textContent = t || ""; }
 
 const LIMITS = {
@@ -93,7 +96,7 @@ async function loadPlan(){
   activeAds = await countAds();
   const ads = maxAds >= 1000 ? activeAds + " annonce(s) active(s), sans limite" : activeAds + "/" + maxAds + " annonces actives";
   $("plan").textContent = "Forfait " + LIMITS[planCode].name + " : " + ads + ", jusqu'à " + maxPhotos + " photos par annonce.";
-  $("lblPhotos").textContent = "Photos (jusqu'à " + maxPhotos + ")";
+  drawPrev();
 }
 
 async function init(){
@@ -119,18 +122,29 @@ $("btnLogin").onclick = async () => {
   say(""); init();
 };
 
-$("files").onchange = () => {
+function drawPrev(){
   const box = $("prev"); box.innerHTML = "";
-  let files = [...$("files").files];
-  if(files.length > maxPhotos){
-    say("Ton forfait " + LIMITS[planCode].name + " permet " + maxPhotos + " photo(s) par annonce. Choisis-en " + maxPhotos + " maximum.");
-    $("files").value = "";
-    return;
-  }
-  say("");
-  files.forEach(f => {
-    const i = document.createElement("img"); i.src = URL.createObjectURL(f); box.appendChild(i);
+  chosen.forEach((f, idx) => {
+    const w = document.createElement("div"); w.className = "th";
+    const i = document.createElement("img"); i.src = URL.createObjectURL(f);
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "rm"; x.textContent = "✕";
+    x.onclick = () => { chosen.splice(idx, 1); say(""); drawPrev(); };
+    w.appendChild(i); w.appendChild(x); box.appendChild(w);
   });
+  $("lblPhotos").textContent = "Photos (" + chosen.length + "/" + maxPhotos + ") – tu peux les ajouter une par une";
+}
+
+$("files").onchange = () => {
+  const added = [...$("files").files];
+  $("files").value = "";
+  let refused = false;
+  added.forEach(f => {
+    if(chosen.length >= maxPhotos){ refused = true; return; }
+    chosen.push(f);
+  });
+  say(refused ? "Ton forfait " + LIMITS[planCode].name + " permet " + maxPhotos + " photo(s) par annonce." : "");
+  drawPrev();
 };
 
 // Compression : max 1280 px, JPEG qualité 0.8
@@ -156,7 +170,7 @@ $("btnPub").onclick = async () => {
   if(!title || !brand || !model || !city || !phone || !year || isNaN(km) || !price){
     say("Remplis tous les champs marqués *."); return;
   }
-  const files = [...$("files").files];
+  const files = chosen.slice();
   if(!files.length){ say("Ajoute au moins une photo."); return; }
   if(files.length > maxPhotos){
     say("Ton forfait " + LIMITS[planCode].name + " permet " + maxPhotos + " photo(s) par annonce."); return;
@@ -187,7 +201,7 @@ $("btnPub").onclick = async () => {
     });
     if(error) throw error;
     ["title","brand","model","year","km","price","city","phone","desc"].forEach(id => $(id).value = "");
-    $("files").value = ""; $("prev").innerHTML = "";
+    chosen = [];
     await loadPlan();
     say("Annonce envoyée. Elle sera visible après validation par l'équipe MadaCar.");
   }catch(e){
