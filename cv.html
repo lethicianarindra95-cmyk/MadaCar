@@ -10,7 +10,8 @@
   body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif; padding:14px; }
   h1 { font-size:22px; margin:14px 0 6px; }
   h2 { font-size:16px; margin:20px 0 8px; color:#e6b800; }
-  p.hint { color:var(--mut); font-size:14px; margin:0 0 10px; }
+  p.hint, div.hint { color:var(--mut); font-size:14px; margin:0 0 10px; }
+  div.hint a { color:#fff; }
   label { display:block; font-size:13px; color:var(--mut); margin:10px 0 4px; }
   input, textarea, select { width:100%; padding:11px; background:#222; border:1px solid var(--line); color:var(--txt); border-radius:8px; font-size:15px; font-family:inherit; }
   textarea { min-height:80px; }
@@ -20,8 +21,10 @@
   .btn.green { background:#1f9d55; font-size:16px; font-weight:600; }
   .btn.small { padding:9px; font-size:14px; background:#333; margin-top:8px; }
   .rm { background:#5a2323; }
-  #cvwrap { margin-top:16px; }
+  #cvwrap { margin-top:16px; position:relative; overflow:hidden; }
   #cv { --acc:#222; background:#fff; color:#111; width:100%; max-width:794px; margin:0 auto; padding:26px; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.4; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .wm { display:none; position:absolute; top:0; right:0; bottom:0; left:0; align-items:center; justify-content:center; pointer-events:none; font:700 34px Arial,Helvetica,sans-serif; color:rgba(0,0,0,.10); transform:rotate(-30deg); white-space:nowrap; z-index:5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .wm-on .wm { display:flex; }
   .cv-h { border-bottom:3px solid var(--acc); padding-bottom:10px; margin-bottom:6px; }
   .cv-name { font-size:26px; font-weight:700; color:var(--acc); }
   .cv-title { font-size:15px; color:#444; margin-top:2px; }
@@ -33,8 +36,9 @@
   @media print {
     .noprint { display:none !important; }
     body { background:#fff; padding:0; }
-    #cvwrap { margin:0; }
+    #cvwrap { margin:0; overflow:visible; }
     #cv { max-width:none; padding:0; }
+    .wm-on .wm { position:fixed; top:0; right:0; bottom:0; left:0; font-size:64px; }
     @page { size:A4; margin:14mm; }
   }
 </style>
@@ -47,7 +51,7 @@
   <a href="services.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Services</a>
 </nav>
 <h1>Générateur de CV</h1>
-<p class="hint">Remplis les champs : ton CV se construit en bas. Ensuite, appuie sur « Télécharger en PDF ».</p>
+<p class="hint">Remplis les champs : ton CV se construit en bas. Ensuite, appuie sur « Télécharger en PDF ». La version gratuite porte un filigrane « Créé avec MadaCar » ; les abonnés téléchargent un CV propre.</p>
 
 <h2>Informations</h2>
 <label>Nom et prénom *</label><input id="nom" placeholder="Ex : Rakoto Jean">
@@ -80,13 +84,19 @@
 </select>
 
 <button class="btn green" id="btnPdf">Télécharger en PDF</button>
-<p class="hint" style="margin-top:8px">Dans la fenêtre qui s'ouvre, choisis « Enregistrer au format PDF » comme imprimante.</p>
+<div class="hint" id="cvstatus" style="margin-top:8px"></div>
+<p class="hint">Dans la fenêtre qui s'ouvre, choisis « Enregistrer au format PDF » comme imprimante.</p>
 <h2>Aperçu</h2>
 </div>
 
-<div id="cvwrap"><div id="cv"></div></div>
+<div id="cvwrap" class="wm-on"><div class="wm">Créé avec MadaCar</div><div id="cv"></div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
+const SB_URL = "https://cpdksgligvxukghiform.supabase.co";
+const SB_KEY = "sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1 ";
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
 const $ = id => document.getElementById(id);
 function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
 
@@ -181,11 +191,42 @@ function renderCV(){
   if(lg.length) section(cv, "Langues", el("p","", lg.join("  ·  ")));
 }
 
+function status(t, l, h){
+  const e = $("cvstatus");
+  e.textContent = t + " ";
+  if(l){ const a = document.createElement("a"); a.href = h; a.textContent = l; e.appendChild(a); }
+}
+
 $("addExp").onclick = () => { exps.push({ poste:"", org:"", per:"", desc:"" }); drawLists(); };
 $("addEdu").onclick = () => { edus.push({ diplome:"", ecole:"", per:"" }); drawLists(); };
 ["nom","titre","tel","email","ville","profil","skills","langs","color"].forEach(id => { $(id).oninput = renderCV; $(id).onchange = renderCV; });
-$("btnPdf").onclick = () => {
+
+$("btnPdf").onclick = async () => {
   if(!$("nom").value.trim()){ alert("Écris au moins ton nom avant de télécharger."); return; }
+  let wm = true;
+  $("btnPdf").disabled = true;
+  try{
+    const ses = await sb.auth.getSession();
+    if(ses.data.session){
+      const r = await sb.rpc("use_tool", { p_tool: "cv" });
+      const res = r.data;
+      if(!r.error && res && res.ok && res.plan !== "free"){
+        wm = false;
+        status(res.limit >= 1000 ? "CV sans filigrane (forfait VIP)." : "CV sans filigrane. Il te reste " + (res.limit - res.used) + " CV propre(s) aujourd’hui.");
+      } else if(res && !res.ok && res.plan && res.plan !== "free"){
+        status("Limite du jour atteinte : CV avec filigrane.", "Voir les forfaits", "abonnement.html");
+      } else {
+        status("Version gratuite avec filigrane. Pour un CV propre :", "choisis un forfait", "abonnement.html");
+      }
+    } else {
+      status("Version gratuite avec filigrane. Connecte-toi avec un forfait pour un CV propre.", "Se connecter", "index.html");
+    }
+  }catch(e){
+    status("Version gratuite avec filigrane.");
+  }finally{
+    $("btnPdf").disabled = false;
+  }
+  $("cvwrap").classList.toggle("wm-on", wm);
   window.print();
 };
 
