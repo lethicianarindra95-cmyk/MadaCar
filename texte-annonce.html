@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texte d’annonce voiture – MadaCar</title>
+<style>
+:root{--bg:#141414;--card:#1f1f1f;--line:#3a3a3a;--txt:#ececec;--mut:#9a9a9a;--acc:#d9d9d9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+nav{display:flex;gap:14px;overflow-x:auto;padding:12px 16px;background:#000;border-bottom:1px solid var(--line);white-space:nowrap}
+nav a{color:var(--mut);text-decoration:none;font-size:14px}
+nav a.on{color:#fff}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:var(--mut);margin:0 0 20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:14px;color:var(--mut);margin-bottom:4px}
+input,select{width:100%;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:16px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.full{grid-column:1/-1}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts label{display:flex;align-items:center;gap:6px;margin:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--txt);width:auto}
+.opts input{width:auto}
+.lang{display:flex;gap:8px}
+.lang button{flex:1}
+button{padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:16px;cursor:pointer}
+button.on,button.main{background:#ececec;color:#111;border-color:#ececec;font-weight:600}
+#out{margin-top:24px;display:none}
+.res{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;white-space:pre-wrap}
+.res h2{font-size:14px;color:var(--mut);margin:0 0 8px;font-weight:600}
+.row{display:flex;gap:8px;margin-top:8px}
+.row button{flex:1}
+.err{color:#ff9d9d;margin-top:10px;min-height:20px}
+</style>
+</head>
+<body>
+<nav>
+<a href="index.html">Accueil</a><a href="annonces.html">Annonces</a><a href="publier.html">Publier</a><a href="abonnement.html">Abonnement</a><a href="mes-annonces.html">Mes annonces</a><a class="on" href="services.html">Services</a>
+</nav>
+<main>
+<h1>Texte d’annonce voiture</h1>
+<p class="sub">Remplis les infos, l’annonce est écrite pour toi. Gratuit.</p>
+
+<div class="grid">
+<div class="full"><label>Langue du texte</label>
+<div class="lang"><button type="button" data-l="fr" class="on">Français</button><button type="button" data-l="mg">Malagasy</button><button type="button" data-l="both">Les deux</button></div></div>
+<div><label for="marque">Marque</label><input id="marque" placeholder="Toyota"></div>
+<div><label for="modele">Modèle</label><input id="modele" placeholder="Corolla"></div>
+<div><label for="annee">Année</label><input id="annee" type="number" inputmode="numeric" placeholder="2012"></div>
+<div><label for="km">Kilométrage (km)</label><input id="km" type="number" inputmode="numeric" placeholder="150000"></div>
+<div><label for="carb">Carburant</label><select id="carb"><option value="Essence">Essence</option><option value="Diesel">Diesel</option><option value="Hybride">Hybride</option><option value="Électrique">Électrique</option></select></div>
+<div><label for="boite">Boîte</label><select id="boite"><option value="manuelle">Manuelle</option><option value="automatique">Automatique</option></select></div>
+<div><label for="etat">État</label><select id="etat"><option value="2">Très bon état</option><option value="1">Bon état</option><option value="0">Quelques réparations à prévoir</option></select></div>
+<div><label for="prix">Prix (Ar)</label><input id="prix" type="number" inputmode="numeric" placeholder="25000000"></div>
+<div><label for="ville">Ville</label><input id="ville" placeholder="Antananarivo"></div>
+<div><label for="tel">Téléphone</label><input id="tel" type="tel" inputmode="tel" placeholder="034 00 000 00"></div>
+<div class="full"><label>Points forts</label>
+<div class="opts">
+<label><input type="checkbox" value="clim">Clim</label>
+<label><input type="checkbox" value="gps">GPS</label>
+<label><input type="checkbox" value="cam">Caméra de recul</label>
+<label><input type="checkbox" value="papiers">Papiers en règle</label>
+<label><input type="checkbox" value="main1">Première main</label>
+<label><input type="checkbox" value="nego">Prix négociable</label>
+</div></div>
+<div class="full"><button type="button" class="main" id="go">Écrire mon annonce</button><div class="err" id="err"></div></div>
+</div>
+
+<div id="out"></div>
+</main>
+<script>
+(function(){
+var lang="fr";
+var $=function(id){return document.getElementById(id)};
+document.querySelectorAll(".lang button").forEach(function(b){
+  b.addEventListener("click",function(){
+    lang=b.dataset.l;
+    document.querySelectorAll(".lang button").forEach(function(x){x.classList.toggle("on",x===b)});
+  });
+});
+function fmt(n){return Number(n).toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g," ")}
+function checks(){var r={};document.querySelectorAll(".opts input").forEach(function(c){r[c.value]=c.checked});return r}
+
+var T={
+fr:{
+ etat:["à remettre en état (quelques réparations à prévoir)","en bon état","en très bon état"],
+ build:function(d,o){
+  var name=d.marque+" "+d.modele+(d.annee?" "+d.annee:"");
+  var title=(o.main1?"À vendre : ":"À vendre : ")+name+(d.ville?" – "+d.ville:"")+(d.prix?" – "+fmt(d.prix)+" Ar":"");
+  var l=[];
+  l.push("🚗 "+name+" "+this.etat[d.etat]+".");
+  var f=[];
+  if(d.annee)f.push("Année "+d.annee);
+  if(d.km)f.push(fmt(d.km)+" km");
+  f.push(d.carb);
+  f.push("boîte "+d.boite);
+  l.push("• "+f.join(", ")+".");
+  var p=[];
+  if(o.clim)p.push("climatisation");
+  if(o.gps)p.push("GPS");
+  if(o.cam)p.push("caméra de recul");
+  if(p.length)l.push("• Équipements : "+p.join(", ")+".");
+  if(o.main1)l.push("• Première main.");
+  if(o.papiers)l.push("• Papiers en règle.");
+  if(d.prix)l.push("💰 Prix : "+fmt(d.prix)+" Ar"+(o.nego?" (négociable)":"")+".");
+  if(d.ville)l.push("📍 "+d.ville);
+  if(d.tel)l.push("📞 Appel ou WhatsApp : "+d.tel);
+  return{title:title,body:l.join("\n")};
+ }
+},
+mg:{
+ etat:["mila fanamboarana kely","tsara","tena tsara"],
+ build:function(d,o){
+  var name=d.marque+" "+d.modele+(d.annee?" "+d.annee:"");
+  var title="Amidy : "+name+(d.ville?" – "+d.ville:"")+(d.prix?" – "+fmt(d.prix)+" Ar":"");
+  var l=[];
+  l.push("🚗 "+name+" – toe-javatra "+this.etat[d.etat]+".");
+  var f=[];
+  if(d.annee)f.push("Taona "+d.annee);
+  if(d.km)f.push(fmt(d.km)+" km");
+  f.push(d.carb==="Diesel"?"Gazoala":d.carb==="Essence"?"Solika (essence)":d.carb==="Hybride"?"Hybride":"Elektrika");
+  f.push(d.boite==="automatique"?"boaty automatique":"boaty manuelle");
+  l.push("• "+f.join(", ")+".");
+  var p=[];
+  if(o.clim)p.push("climatisation");
+  if(o.gps)p.push("GPS");
+  if(o.cam)p.push("camera aoriana");
+  if(p.length)l.push("• Misy : "+p.join(", ")+".");
+  if(o.main1)l.push("• Tompony voalohany.");
+  if(o.papiers)l.push("• Taratasy rehetra mazava.");
+  if(d.prix)l.push("💰 Vidiny : "+fmt(d.prix)+" Ar"+(o.nego?" (azo hiadiana)":"")+".");
+  if(d.ville)l.push("📍 "+d.ville);
+  if(d.tel)l.push("📞 Antsoy na WhatsApp : "+d.tel);
+  return{title:title,body:l.join("\n")};
+ }
+}};
+
+function tags(d,both){
+  var c=function(s){return String(s||"").replace(/[^a-zA-Z0-9]/g,"")};
+  var t=["#MadaCar","#Madagascar",d.marque&&"#"+c(d.marque),d.modele&&"#"+c(d.modele),d.ville&&"#"+c(d.ville),both?"#Amidy #Mivarotra":"#AVendre","#Voiture"];
+  return t.filter(Boolean).join(" ");
+}
+
+function block(h,txt){
+  var wrap=document.createElement("div");
+  var box=document.createElement("div");box.className="res";
+  var t=document.createElement("h2");t.textContent=h;
+  var p=document.createElement("div");p.textContent=txt;
+  box.appendChild(t);box.appendChild(p);wrap.appendChild(box);
+  return{wrap:wrap,text:txt};
+}
+
+function copy(txt,btn){
+  var done=function(){var o=btn.textContent;btn.textContent="Copié ✓";setTimeout(function(){btn.textContent=o},1500)};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){fallback()})}else fallback();
+  function fallback(){var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();try{document.execCommand("copy");done()}catch(e){}document.body.removeChild(a)}
+}
+
+$("go").addEventListener("click",function(){
+  var d={marque:$("marque").value.trim(),modele:$("modele").value.trim(),annee:$("annee").value,km:$("km").value,
+    carb:$("carb").value,boite:$("boite").value,etat:Number($("etat").value),prix:$("prix").value,ville:$("ville").value.trim(),tel:$("tel").value.trim()};
+  if(!d.marque||!d.modele){$("err").textContent="Indique au moins la marque et le modèle.";return}
+  $("err").textContent="";
+  var o=checks();
+  var langs=lang==="both"?["fr","mg"]:[lang];
+  var out=$("out");out.innerHTML="";out.style.display="block";
+  var full=[];var firstTitle="";var firstBody="";
+  langs.forEach(function(k,i){
+    var r=T[k].build(d,o);
+    if(i===0){firstTitle=r.title;firstBody=r.body}
+    var b1=block(k==="fr"?"Titre (français)":"Titre (malagasy)",r.title);
+    var b2=block(k==="fr"?"Description (français)":"Description (malagasy)",r.body);
+    out.appendChild(b1.wrap);out.appendChild(b2.wrap);
+    full.push(r.title+"\n\n"+r.body);
+  });
+  var tg=tags(d,lang==="both"||lang==="mg");
+  var b3=block("Hashtags",tg);out.appendChild(b3.wrap);
+  full.push(tg);
+  var row=document.createElement("div");row.className="row";
+  var bc=document.createElement("button");bc.type="button";bc.className="main";bc.textContent="Copier tout";
+  bc.addEventListener("click",function(){copy(full.join("\n\n———\n\n"),bc)});
+  var bp=document.createElement("button");bp.type="button";bp.textContent="Publier sur MadaCar";
+  bp.addEventListener("click",function(){
+    try{localStorage.setItem("madacar_draft",JSON.stringify({title:firstTitle,description:firstBody,brand:d.marque,model:d.modele,year:d.annee,mileage_km:d.km,city:d.ville,price_ar:d.prix,phone:d.tel}))}catch(e){}
+    location.href="publier.html";
+  });
+  row.appendChild(bc);row.appendChild(bp);out.appendChild(row);
+  out.scrollIntoView({behavior:"smooth"});
+});
+})();
+</script>
+</body>
+</html>
