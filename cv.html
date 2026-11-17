@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MadaCar – Générateur de CV</title>
+<style>
+  :root { --bg:#111; --card:#1c1c1c; --line:#333; --txt:#eee; --mut:#999; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif; padding:14px; }
+  h1 { font-size:22px; margin:14px 0 6px; }
+  h2 { font-size:16px; margin:20px 0 8px; color:#e6b800; }
+  p.hint { color:var(--mut); font-size:14px; margin:0 0 10px; }
+  label { display:block; font-size:13px; color:var(--mut); margin:10px 0 4px; }
+  input, textarea, select { width:100%; padding:11px; background:#222; border:1px solid var(--line); color:var(--txt); border-radius:8px; font-size:15px; font-family:inherit; }
+  textarea { min-height:80px; }
+  .two { display:flex; gap:8px; } .two > div { flex:1; min-width:0; }
+  .item { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; }
+  .btn { width:100%; padding:13px; margin-top:10px; border:0; border-radius:8px; background:#555; color:#fff; font-size:15px; }
+  .btn.green { background:#1f9d55; font-size:16px; font-weight:600; }
+  .btn.small { padding:9px; font-size:14px; background:#333; margin-top:8px; }
+  .rm { background:#5a2323; }
+  #cvwrap { margin-top:16px; }
+  #cv { --acc:#222; background:#fff; color:#111; width:100%; max-width:794px; margin:0 auto; padding:26px; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.4; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .cv-h { border-bottom:3px solid var(--acc); padding-bottom:10px; margin-bottom:6px; }
+  .cv-name { font-size:26px; font-weight:700; color:var(--acc); }
+  .cv-title { font-size:15px; color:#444; margin-top:2px; }
+  .cv-contact { font-size:12px; color:#555; margin-top:5px; }
+  .cv-sec h3 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--acc); border-bottom:1px solid #ddd; padding-bottom:3px; margin:14px 0 6px; }
+  .cv-item { margin-bottom:8px; }
+  .cv-per { color:#666; font-size:12px; }
+  .cv-item p, .cv-sec p { margin:2px 0 0; white-space:pre-wrap; }
+  @media print {
+    .noprint { display:none !important; }
+    body { background:#fff; padding:0; }
+    #cvwrap { margin:0; }
+    #cv { max-width:none; padding:0; }
+    @page { size:A4; margin:14mm; }
+  }
+</style>
+</head>
+<body>
+<div class="noprint">
+<nav style="display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:#000;position:sticky;top:0;z-index:50">
+  <a href="accueil.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Accueil</a>
+  <a href="annonces.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Annonces</a>
+  <a href="services.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Services</a>
+</nav>
+<h1>Générateur de CV</h1>
+<p class="hint">Remplis les champs : ton CV se construit en bas. Ensuite, appuie sur « Télécharger en PDF ».</p>
+
+<h2>Informations</h2>
+<label>Nom et prénom *</label><input id="nom" placeholder="Ex : Rakoto Jean">
+<label>Poste recherché</label><input id="titre" placeholder="Ex : Technicien en génie civil">
+<div class="two">
+  <div><label>Téléphone</label><input id="tel" type="tel"></div>
+  <div><label>Email</label><input id="email" type="email"></div>
+</div>
+<label>Ville</label><input id="ville" placeholder="Ex : Antananarivo">
+<label>Profil (2 à 3 phrases)</label><textarea id="profil" placeholder="Présente-toi en quelques mots."></textarea>
+
+<h2>Expériences</h2>
+<div id="expBox"></div>
+<button class="btn small" id="addExp">+ Ajouter une expérience</button>
+
+<h2>Formation</h2>
+<div id="eduBox"></div>
+<button class="btn small" id="addEdu">+ Ajouter une formation</button>
+
+<h2>Compétences et langues</h2>
+<label>Compétences (sépare par des virgules)</label><input id="skills" placeholder="Ex : Excel, AutoCAD, Word, gestion de chantier">
+<label>Langues (sépare par des virgules)</label><input id="langs" placeholder="Ex : Malagasy (natif), Français (courant), Anglais (moyen)">
+
+<h2>Couleur du CV</h2>
+<select id="color">
+  <option value="#222222">Noir</option>
+  <option value="#1f4e9d">Bleu</option>
+  <option value="#1f7a4d">Vert</option>
+  <option value="#9b3d23">Brique</option>
+</select>
+
+<button class="btn green" id="btnPdf">Télécharger en PDF</button>
+<p class="hint" style="margin-top:8px">Dans la fenêtre qui s'ouvre, choisis « Enregistrer au format PDF » comme imprimante.</p>
+<h2>Aperçu</h2>
+</div>
+
+<div id="cvwrap"><div id="cv"></div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
+
+let exps = [{ poste:"", org:"", per:"", desc:"" }];
+let edus = [{ diplome:"", ecole:"", per:"" }];
+
+function field(labelText, value, onInput, multi){
+  const wrap = document.createElement("div");
+  wrap.appendChild(el("label","", labelText));
+  const i = document.createElement(multi ? "textarea" : "input");
+  i.value = value;
+  i.oninput = () => { onInput(i.value); renderCV(); };
+  wrap.appendChild(i);
+  return wrap;
+}
+
+function drawLists(){
+  const eb = $("expBox"); eb.innerHTML = "";
+  exps.forEach((x, idx) => {
+    const box = el("div","item");
+    box.appendChild(field("Poste", x.poste, v => x.poste = v));
+    box.appendChild(field("Entreprise ou lieu", x.org, v => x.org = v));
+    box.appendChild(field("Période (ex : 2022 – 2024)", x.per, v => x.per = v));
+    box.appendChild(field("Ce que tu as fait", x.desc, v => x.desc = v, true));
+    const d = el("button","btn small rm","Supprimer"); d.type = "button";
+    d.onclick = () => { exps.splice(idx, 1); drawLists(); renderCV(); };
+    box.appendChild(d); eb.appendChild(box);
+  });
+  const db = $("eduBox"); db.innerHTML = "";
+  edus.forEach((x, idx) => {
+    const box = el("div","item");
+    box.appendChild(field("Diplôme ou formation", x.diplome, v => x.diplome = v));
+    box.appendChild(field("École ou université", x.ecole, v => x.ecole = v));
+    box.appendChild(field("Période (ex : 2019 – 2022)", x.per, v => x.per = v));
+    const d = el("button","btn small rm","Supprimer"); d.type = "button";
+    d.onclick = () => { edus.splice(idx, 1); drawLists(); renderCV(); };
+    box.appendChild(d); db.appendChild(box);
+  });
+}
+
+function section(cv, title, node){
+  const s = el("div","cv-sec");
+  s.appendChild(el("h3","", title));
+  s.appendChild(node);
+  cv.appendChild(s);
+}
+
+function renderCV(){
+  const cv = $("cv"); cv.innerHTML = "";
+  cv.style.setProperty("--acc", $("color").value);
+  const v = id => $(id).value.trim();
+
+  const h = el("div","cv-h");
+  h.appendChild(el("div","cv-name", v("nom") || "Ton nom"));
+  if(v("titre")) h.appendChild(el("div","cv-title", v("titre")));
+  const contact = [v("tel"), v("email"), v("ville")].filter(Boolean).join("  ·  ");
+  if(contact) h.appendChild(el("div","cv-contact", contact));
+  cv.appendChild(h);
+
+  if(v("profil")) section(cv, "Profil", el("p","", v("profil")));
+
+  const ex = exps.filter(x => x.poste.trim() || x.org.trim());
+  if(ex.length){
+    const wrap = document.createElement("div");
+    ex.forEach(x => {
+      const it = el("div","cv-item");
+      it.appendChild(el("b","", x.poste.trim() || x.org.trim()));
+      const sub = [x.poste.trim() ? x.org.trim() : "", x.per.trim()].filter(Boolean).join("  |  ");
+      if(sub) it.appendChild(el("div","cv-per", sub));
+      if(x.desc.trim()) it.appendChild(el("p","", x.desc.trim()));
+      wrap.appendChild(it);
+    });
+    section(cv, "Expériences", wrap);
+  }
+
+  const ed = edus.filter(x => x.diplome.trim() || x.ecole.trim());
+  if(ed.length){
+    const wrap = document.createElement("div");
+    ed.forEach(x => {
+      const it = el("div","cv-item");
+      it.appendChild(el("b","", x.diplome.trim() || x.ecole.trim()));
+      const sub = [x.diplome.trim() ? x.ecole.trim() : "", x.per.trim()].filter(Boolean).join("  |  ");
+      if(sub) it.appendChild(el("div","cv-per", sub));
+      wrap.appendChild(it);
+    });
+    section(cv, "Formation", wrap);
+  }
+
+  const sk = v("skills").split(",").map(s => s.trim()).filter(Boolean);
+  if(sk.length) section(cv, "Compétences", el("p","", sk.join("  ·  ")));
+  const lg = v("langs").split(",").map(s => s.trim()).filter(Boolean);
+  if(lg.length) section(cv, "Langues", el("p","", lg.join("  ·  ")));
+}
+
+$("addExp").onclick = () => { exps.push({ poste:"", org:"", per:"", desc:"" }); drawLists(); };
+$("addEdu").onclick = () => { edus.push({ diplome:"", ecole:"", per:"" }); drawLists(); };
+["nom","titre","tel","email","ville","profil","skills","langs","color"].forEach(id => { $(id).oninput = renderCV; $(id).onchange = renderCV; });
+$("btnPdf").onclick = () => {
+  if(!$("nom").value.trim()){ alert("Écris au moins ton nom avant de télécharger."); return; }
+  window.print();
+};
+
+drawLists();
+renderCV();
+</script>
+</body>
+</html>
