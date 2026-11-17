@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MadaCar – Services</title>
+<style>
+  :root { --bg:#111; --card:#1c1c1c; --line:#333; --txt:#eee; --mut:#999; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,sans-serif; padding:14px; line-height:1.45; }
+  h1 { font-size:24px; margin:18px 0 6px; }
+  p { margin:0 0 12px; color:var(--mut); font-size:15px; }
+  .grid { display:grid; gap:12px; margin-top:14px; }
+  .tool { display:block; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; color:var(--txt); text-decoration:none; }
+  .tool h3 { margin:0 0 4px; font-size:18px; }
+  .tool span { color:var(--mut); font-size:14px; }
+  .tool.soon { opacity:.55; }
+  .tag { display:inline-block; font-size:12px; padding:3px 8px; border-radius:10px; background:#1f9d55; color:#fff; margin-bottom:6px; }
+  .tag.soon { background:#444; }
+</style>
+</head>
+<body><nav style="display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:#000;position:sticky;top:0;z-index:50">
+  <a href="accueil.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Accueil</a>
+  <a href="annonces.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Annonces</a>
+  <a href="services.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Services</a>
+  <a href="publier.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Publier</a>
+  <a href="abonnement.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Abonnement</a>
+  <a href="mes-annonces.html" style="color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font:14px system-ui,sans-serif">Mes annonces</a>
+</nav>
+
+<h1>Services MadaCar</h1>
+<p>Des outils prêts à l'emploi, directement sur ton téléphone. Pour l'instant, ils sont gratuits.</p>
+
+<div class="grid">
+  <a class="tool" href="cv.html">
+    <span class="tag">Disponible</span>
+    <h3>Générateur de CV</h3>
+    <span>Remplis le formulaire et télécharge ton CV en PDF.</span>
+  </a>
+  <div class="tool soon">
+    <span class="tag soon">Bientôt</span>
+    <h3>Texte d'annonce voiture</h3>
+    <span>Un texte clair et prêt à publier à partir des infos de ta voiture.</span>
+  </div>
+  <div class="tool soon">
+    <span class="tag soon">Bientôt</span>
+    <h3>QR code et menu QR</h3>
+    <span>Pour un commerce, un garage ou une page Facebook.</span>
+  </div>
+  <div class="tool soon">
+    <span class="tag soon">Bientôt</span>
+    <h3>Retouche de photos</h3>
+    <span>Redimensionner, éclaircir et ajouter un logo à tes photos.</span>
+  </div>
+</div>
+</body>
+</html>
