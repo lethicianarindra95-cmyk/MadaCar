@@ -32,6 +32,7 @@ button.on,button.main{background:#ececec;color:#111;border-color:#ececec;font-we
 .row{display:flex;gap:8px;margin-top:8px}
 .row button{flex:1}
 .err{color:#ff9d9d;margin-top:10px;min-height:20px}
+.quota{color:var(--mut);font-size:14px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -64,13 +65,17 @@ button.on,button.main{background:#ececec;color:#111;border-color:#ececec;font-we
 <label><input type="checkbox" value="main1">Première main</label>
 <label><input type="checkbox" value="nego">Prix négociable</label>
 </div></div>
-<div class="full"><button type="button" class="main" id="go">Écrire mon annonce</button><div class="err" id="err"></div></div>
+<div class="full"><button type="button" class="main" id="go">Écrire mon annonce</button><div class="err" id="err"></div><div class="quota" id="quota"></div></div>
 </div>
 
 <div id="out"></div>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 (function(){
+var SB_URL="https://cpdksgligvxukghiform.supabase.co";
+var SB_KEY="sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1 ";
+var sb=window.supabase.createClient(SB_URL,SB_KEY);
 var lang="fr";
 var $=function(id){return document.getElementById(id)};
 document.querySelectorAll(".lang button").forEach(function(b){
@@ -157,11 +162,28 @@ function copy(txt,btn){
   function fallback(){var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();try{document.execCommand("copy");done()}catch(e){}document.body.removeChild(a)}
 }
 
-$("go").addEventListener("click",function(){
+function msg(t,l,h){var e=$("err");e.textContent=t+" ";if(l){var a=document.createElement("a");a.href=h;a.textContent=l;a.style.color="#fff";e.appendChild(a)}}
+$("go").addEventListener("click",async function(){
   var d={marque:$("marque").value.trim(),modele:$("modele").value.trim(),annee:$("annee").value,km:$("km").value,
     carb:$("carb").value,boite:$("boite").value,etat:Number($("etat").value),prix:$("prix").value,ville:$("ville").value.trim(),tel:$("tel").value.trim()};
   if(!d.marque||!d.modele){$("err").textContent="Indique au moins la marque et le modèle.";return}
-  $("err").textContent="";
+  $("err").textContent="";$("quota").textContent="";
+  var res;
+  $("go").disabled=true;
+  try{
+    var ses=await sb.auth.getSession();
+    if(!ses.data.session){msg("Connecte-toi pour utiliser cet outil.","Se connecter","index.html");return}
+    var r=await sb.rpc("use_tool",{p_tool:"texte-annonce"});
+    if(r.error)throw r.error;
+    res=r.data;
+  }catch(e){msg("Erreur : "+(e.message||e));return}
+  finally{$("go").disabled=false}
+  if(!res||!res.ok){
+    if(res&&res.error==="login"){msg("Connecte-toi pour utiliser cet outil.","Se connecter","index.html")}
+    else{msg("Limite du jour atteinte ("+res.limit+" textes avec ton forfait). Reviens demain ou","passe à un forfait supérieur.","abonnement.html")}
+    return;
+  }
+  $("quota").textContent=res.limit>=1000?"Textes illimités avec ton forfait VIP.":"Il te reste "+(res.limit-res.used)+" texte(s) aujourd’hui.";
   var o=checks();
   var langs=lang==="both"?["fr","mg"]:[lang];
   var out=$("out");out.innerHTML="";out.style.display="block";
