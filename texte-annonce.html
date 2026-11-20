@@ -168,6 +168,8 @@ $("go").addEventListener("click",async function(){
     carb:$("carb").value,boite:$("boite").value,etat:Number($("etat").value),prix:$("prix").value,ville:$("ville").value.trim(),tel:$("tel").value.trim()};
   if(!d.marque||!d.modele){$("err").textContent="Indique au moins la marque et le modèle.";return}
   $("err").textContent="";$("quota").textContent="";
+  function cap(s){return s.replace(/[^\s-]+/g,function(w){return(w===w.toLowerCase()&&!/\d/.test(w))?w.charAt(0).toUpperCase()+w.slice(1):w})}
+  d.marque=cap(d.marque);d.modele=cap(d.modele);d.ville=cap(d.ville);
   var res;
   $("go").disabled=true;
   try{
