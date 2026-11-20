@@ -98,7 +98,17 @@ async function loadPlan(){
   $("plan").textContent = "Forfait " + LIMITS[planCode].name + " : " + ads + ", jusqu'à " + maxPhotos + " photos par annonce.";
   drawPrev();
 }
-
+function fillDraft(){
+  try{
+    const raw = localStorage.getItem("madacar_draft");
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    const m = {title:"title", brand:"brand", model:"model", year:"year", mileage_km:"km", price_ar:"price", city:"city", phone:"phone", description:"desc"};
+    Object.keys(m).forEach(k => { if(d[k]) $(m[k]).value = d[k]; });
+    localStorage.removeItem("madacar_draft");
+    say("Formulaire rempli depuis ton texte d'annonce. Ajoute tes photos puis envoie.");
+  }catch(e){}
+}
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ $("login").classList.remove("hide"); return; }
