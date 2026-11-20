@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR code - MadaCar</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif}
+header{background:#000;padding:14px;text-align:center;font-weight:700;border-bottom:1px solid #333}
+main{max-width:520px;margin:auto;padding:14px}
+label{display:block;margin:12px 0 4px;font-size:14px;color:#bbb}
+select,input{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border-radius:8px;border:1px solid #444;background:#1c1c1c;color:#eee}
+.btn{background:#444;color:#fff;border:0;border-radius:8px;padding:12px 14px;font-size:15px;margin-top:12px;width:100%}
+.main{background:#eee;color:#000;font-weight:700}
+#q{background:#fff;padding:14px;border-radius:10px;width:256px;margin:16px auto 0;display:none}
+small{color:#999}
+a{color:#ccc}
+</style></head><body>
+<header>QR code</header>
+<main>
+<label>Type de QR code</label>
+<select id="t">
+<option value="url">Lien (Facebook, site...)</option>
+<option value="wa">WhatsApp (numéro)</option>
+<option value="txt">Texte</option>
+</select>
+<label>Contenu</label>
+<input id="v" placeholder="facebook.com/ma-page ou 038 27 255 11">
+<small>WhatsApp : écris le numéro, le +261 est ajouté tout seul.</small>
+<button class="btn main" id="go">Créer le QR code</button>
+<div id="q"></div>
+<button class="btn" id="dl" style="display:none">Télécharger l'image</button>
+<p><a href="services.html">← Retour aux Services</a></p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function val(){
+  let v=$('v').value.trim(),t=$('t').value;
+  if(t==='wa'){
+    v=v.replace(/\D/g,'');
+    if(v.startsWith('0'))v='261'+v.slice(1);
+    if(v)v='https://wa.me/'+v;
+  }else if(t==='url'&&v&&!/^https?:\/\//i.test(v)){
+    v='https://'+v;
+  }
+  return v;
+}
+$('go').onclick=()=>{
+  const v=val();
+  if(!v){alert('Écris quelque chose.');return;}
+  $('q').innerHTML='';
+  $('q').style.display='block';
+  new QRCode($('q'),{text:v,width:256,height:256,correctLevel:QRCode.CorrectLevel.M});
+  $('dl').style.display='block';
+};
+$('dl').onclick=()=>{
+  const cv=$('q').querySelector('canvas');
+  if(!cv)return;
+  const o=document.createElement('canvas');
+  o.width=o.height=cv.width+40;
+  const g=o.getContext('2d');
+  g.fillStyle='#fff';
+  g.fillRect(0,0,o.width,o.height);
+  g.drawImage(cv,20,20);
+  const a=document.createElement('a');
+  a.href=o.toDataURL('image/png');
+  a.download='madacar-qr.png';
+  a.click();
+};
+</script>
+</body></html>
