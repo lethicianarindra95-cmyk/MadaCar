@@ -124,7 +124,7 @@ async function init(){
   $("login").classList.add("hide");
   $("app").classList.remove("hide");
 }
-
+  fillDraft();
 $("btnLogin").onclick = async () => {
   say("Connexion...");
   const { error } = await sb.auth.signInWithPassword({ email:$("email").value.trim(), password:$("pass").value });
