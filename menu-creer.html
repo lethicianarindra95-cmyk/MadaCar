@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Créer mon menu – MadaCar</title>
+<style>
+:root{--bg:#111;--card:#1c1c1c;--line:#333;--txt:#eee;--mut:#999}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,sans-serif;padding:0 14px 40px}
+nav{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:#000;margin:0 -14px}
+nav a{color:#fff;text-decoration:none;padding:8px 14px;border:1px solid #555;border-radius:20px;white-space:nowrap;font-size:14px}
+h1{font-size:20px;margin:14px 0 8px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input{width:100%;padding:11px;background:#222;border:1px solid var(--line);color:var(--txt);border-radius:8px;font-size:15px}
+.btn{padding:12px;border:0;border-radius:8px;background:#555;color:#fff;font-size:15px}
+.main{background:#eee;color:#111;font-weight:700}
+.full{width:100%;margin-top:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+.item{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.item .nm,.item button{grid-column:1/-1}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.row .btn{flex:1;padding:9px;font-size:14px;text-align:center;text-decoration:none;color:#fff}
+#msg{margin:10px 0;color:#e6b800;font-size:14px}
+a{color:#ccc}
+.hide{display:none}
+</style></head><body>
+<nav>
+<a href="accueil.html">Accueil</a><a href="annonces.html">Annonces</a><a href="services.html">Services</a><a href="publier.html">Publier</a><a href="abonnement.html">Abonnement</a><a href="mes-annonces.html">Mes annonces</a>
+</nav>
+<h1>Mon menu QR</h1>
+<div id="msg"></div>
+
+<div id="login" class="hide">
+<label>Email</label><input id="email" type="email">
+<label>Mot de passe</label><input id="pass" type="password">
+<button class="btn main full" id="btnLogin">Connexion</button>
+<p>Pas de compte ? <a href="index.html">Inscris-toi ici</a>.</p>
+</div>
+
+<div id="app" class="hide">
+<div id="list"></div>
+<button class="btn main full" id="btnNew">+ Nouveau menu</button>
+
+<div id="form" class="hide">
+<h1 id="formTitle">Nouveau menu</h1>
+<label>Nom du commerce *</label><input id="mname" placeholder="Ex : Chez Mimi">
+<label>Téléphone</label><input id="mphone" type="tel">
+<label>Ville</label><input id="mcity">
+<h1>Plats et produits</h1>
+<div id="items"></div>
+<button class="btn full" id="btnAdd">+ Ajouter une ligne</button>
+<button class="btn main full" id="save">Enregistrer le menu</button>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const sb = supabase.createClient("https://cpdksgligvxukghiform.supabase.co","sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1");
+const $ = id => document.getElementById(id);
+let me = null, editId = null;
+function say(t){ $("msg").textContent = t || ""; }
+const menuUrl = id => location.origin + location.pathname.replace(/[^/]*$/,"") + "menu.html?id=" + id;
+
+function addItem(it){
+  it = it || {};
+  const d = document.createElement("div"); d.className = "item";
+  d.innerHTML = '<input class="nm" placeholder="Nom du plat ou produit"><input class="cat" placeholder="Catégorie (ex : Boissons)"><input class="pr" type="number" inputmode="numeric" placeholder="Prix (Ar)"><button type="button" class="btn">Retirer</button>';
+  d.querySelector(".nm").value = it.name || "";
+  d.querySelector(".cat").value = it.category || "";
+  d.querySelector(".pr").value = it.price_ar == null ? "" : it.price_ar;
+  d.querySelector("button").onclick = () => d.remove();
+  $("items").appendChild(d);
+}
+function mkBtn(t, fn){ const b = document.createElement("button"); b.type="button"; b.className="btn"; b.textContent=t; b.onclick=fn; return b; }
+function mkLink(t, h){ const a = document.createElement("a"); a.className="btn"; a.textContent=t; a.href=h; return a; }
+
+async function loadMenus(){
+  const { data, error } = await sb.from("menus").select("id,name").eq("owner_id", me.id).order("created_at", { ascending:false });
+  const box = $("list"); box.innerHTML = "";
+  if(error){ say("Erreur : " + error.message); return; }
+  if(!data.length){ box.textContent = "Tu n'as pas encore de menu."; return; }
+  data.forEach(m => {
+    const c = document.createElement("div"); c.className = "card";
+    const t = document.createElement("b"); t.textContent = m.name; c.appendChild(t);
+    const r = document.createElement("div"); r.className = "row";
+    r.appendChild(mkBtn("Modifier", () => edit(m.id)));
+    r.appendChild(mkLink("Voir", "menu.html?id=" + m.id));
+    r.appendChild(mkLink("QR code", "qr-code.html?u=" + encodeURIComponent(menuUrl(m.id))));
+    r.appendChild(mkBtn("Supprimer", () => del(m.id, m.name)));
+    c.appendChild(r); box.appendChild(c);
+  });
+}
+
+function showForm(title){
+  $("formTitle").textContent = title;
+  $("form").classList.remove("hide");
+  $("form").scrollIntoView();
+}
+function newMenu(){
+  editId = null;
+  $("mname").value = ""; $("mphone").value = ""; $("mcity").value = "";
+  $("items").innerHTML = "";
+  addItem(); addItem(); addItem();
+  showForm("Nouveau menu");
+}
+async function edit(id){
+  const { data:m } = await sb.from("menus").select("*").eq("id", id).single();
+  const { data:its } = await sb.from("menu_items").select("*").eq("menu_id", id).order("position");
+  editId = id;
+  $("mname").value = m.name || ""; $("mphone").value = m.phone || ""; $("mcity").value = m.city || "";
+  $("items").innerHTML = "";
+  (its || []).forEach(addItem);
+  if(!its || !its.length) addItem();
+  showForm("Modifier le menu");
+}
+async function del(id, name){
+  if(!confirm("Supprimer le menu « " + name + " » ? Son QR code ne marchera plus.")) return;
+  const { error } = await sb.from("menus").delete().eq("id", id);
+  if(error){ say("Erreur : " + error.message); return; }
+  say("Menu supprimé."); loadMenus();
+}
+
+$("btnNew").onclick = newMenu;
+$("btnAdd").onclick = () => addItem();
+
+$("save").onclick = async () => {
+  const name = $("mname").value.trim();
+  if(!name){ say("Donne un nom à ton menu (ex : Chez Mimi)."); return; }
+  const rows = [...document.querySelectorAll("#items .item")].map((d, i) => ({
+    category: d.querySelector(".cat").value.trim() || null,
+    name: d.querySelector(".nm").value.trim(),
+    price_ar: parseInt(d.querySelector(".pr").value) || null,
+    position: i
+  })).filter(r => r.name);
+  if(!rows.length){ say("Ajoute au moins un plat ou produit."); return; }
+  $("save").disabled = true; say("Enregistrement...");
+  try{
+    const f = { name, phone: $("mphone").value.trim() || null, city: $("mcity").value.trim() || null };
+    let id = editId;
+    if(id){
+      const { error } = await sb.from("menus").update(f).eq("id", id);
+      if(error) throw error;
+      const { error:e2 } = await sb.from("menu_items").delete().eq("menu_id", id);
+      if(e2) throw e2;
+    }else{
+      const { data, error } = await sb.from("menus").insert({ ...f, owner_id: me.id }).select("id").single();
+      if(error) throw error;
+      id = data.id;
+    }
+    const { error:e3 } = await sb.from("menu_items").insert(rows.map(r => ({ ...r, menu_id: id })));
+    if(e3) throw e3;
+    $("form").classList.add("hide"); editId = null;
+    await loadMenus();
+    say("Menu enregistré. Touche « Voir » pour l'ouvrir ou « QR code » pour créer ton QR.");
+  }catch(e){ say("Erreur : " + (e.message || e)); }
+  $("save").disabled = false;
+};
+
+$("btnLogin").onclick = async () => {
+  say("Connexion...");
+  const { error } = await sb.auth.signInWithPassword({ email:$("email").value.trim(), password:$("pass").value });
+  if(error){ say("Erreur : " + error.message); return; }
+  say(""); init();
+};
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ $("login").classList.remove("hide"); $("app").classList.add("hide"); return; }
+  me = session.user;
+  $("login").classList.add("hide"); $("app").classList.remove("hide");
+  await loadMenus();
+}
+init();
+</script>
+</body></html>
