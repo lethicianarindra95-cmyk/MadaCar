@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Retouche photo - MadaCar</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif}
+header{background:#000;padding:14px;text-align:center;font-weight:700;border-bottom:1px solid #333}
+main{max-width:520px;margin:auto;padding:14px}
+canvas{width:100%;background:#222;border-radius:10px;display:block;margin-top:10px}
+label{display:block;margin:12px 0 4px;font-size:14px;color:#bbb}
+input[type=range]{width:100%}
+.btn{background:#444;color:#fff;border:0;border-radius:8px;padding:12px 14px;font-size:15px;margin:4px 2px}
+.main{background:#eee;color:#000;font-weight:700}
+a{color:#ccc}
+</style></head><body>
+<header>Retouche photo</header>
+<main>
+<input type="file" id="f" accept="image/*">
+<canvas id="c" width="300" height="200"></canvas>
+<div id="ctl" style="display:none">
+<label>Luminosité</label><input type="range" id="br" min="50" max="150" value="100">
+<label>Contraste</label><input type="range" id="ct" min="50" max="150" value="100">
+<label>Couleurs</label><input type="range" id="sa" min="0" max="200" value="100">
+<div style="margin-top:12px">
+<button class="btn" id="auto">✨ Auto</button>
+<button class="btn" id="rot">⟳ Pivoter</button>
+<button class="btn" id="rst">Réinitialiser</button>
+</div>
+<button class="btn main" id="dl" style="width:100%;margin-top:10px">Télécharger la photo</button>
+</div>
+<p><a href="services.html">← Retour aux Services</a></p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const c=$('c'),x=c.getContext('2d');
+let img=null,rot=0;
+function draw(){
+  if(!img)return;
+  let w=img.naturalWidth,h=img.naturalHeight;
+  const k=Math.min(1,1280/Math.max(w,h));
+  w=Math.round(w*k);h=Math.round(h*k);
+  const sw=rot%2?h:w,sh=rot%2?w:h;
+  c.width=sw;c.height=sh;
+  x.filter='brightness('+$('br').value+'%) contrast('+$('ct').value+'%) saturate('+$('sa').value+'%)';
+  x.translate(sw/2,sh/2);
+  x.rotate(rot*Math.PI/2);
+  x.drawImage(img,-w/2,-h/2,w,h);
+}
+function set(b,t,s){$('br').value=b;$('ct').value=t;$('sa').value=s;draw();}
+$('f').onchange=e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const i=new Image();
+  i.onload=()=>{img=i;rot=0;set(100,100,100);$('ctl').style.display='block';};
+  i.src=URL.createObjectURL(file);
+};
+['br','ct','sa'].forEach(id=>$(id).oninput=draw);
+$('auto').onclick=()=>set(108,112,112);
+$('rst').onclick=()=>{rot=0;set(100,100,100);};
+$('rot').onclick=()=>{rot=(rot+1)%4;draw();};
+$('dl').onclick=()=>{
+  c.toBlob(b=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);
+    a.download='madacar-photo.jpg';
+    a.click();
+  },'image/jpeg',0.85);
+};
+</script>
+</body></html>
