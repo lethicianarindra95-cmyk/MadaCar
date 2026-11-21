@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MadaCar - Tableau de bord</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#1a1a1a;color:#eee;padding:14px}
+h1{font-size:20px}h2{font-size:15px;color:#bbb;margin:22px 0 8px}
+input,button{padding:10px;border-radius:6px;border:0;font-size:15px;width:100%;box-sizing:border-box;margin-bottom:8px}
+button{background:#555;color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{background:#2b2b2b;border-radius:8px;padding:12px}
+.card b{display:block;font-size:22px;margin-top:4px}
+.bar{display:flex;align-items:center;margin:4px 0;font-size:13px}
+.bar span:first-child{width:62px}
+.bar i{display:block;height:14px;background:#999;border-radius:3px;margin:0 8px}
+#err{color:#f66}
+</style>
+</head>
+<body>
+<h1>Tableau de bord MadaCar</h1>
+<div id="login">
+  <input id="email" type="email" placeholder="Email admin">
+  <input id="pass" type="password" placeholder="Mot de passe">
+  <button onclick="connect()">Se connecter</button>
+</div>
+<p id="err"></p>
+<div id="out"></div>
+<script>
+const SUPABASE_URL="https://cpdksgligvxukghiform.supabase.co";
+const SUPABASE_KEY="sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const fmt=n=>Number(n||0).toLocaleString("fr-FR");
+function card(t,v){return `<div class="card">${t}<b>${v}</b></div>`}
+function bars(arr,unit){
+  if(!arr||!arr.length)return "<p>Pas encore de données.</p>";
+  const max=Math.max(...arr.map(x=>Number(x.n)),1);
+  return arr.map(x=>`<div class="bar"><span>${x.m}</span><i style="width:${Math.max(4,Number(x.n)/max*55)}%"></i><span>${fmt(x.n)}${unit}</span></div>`).join("");
+}
+async function connect(){
+  const err=document.getElementById("err");err.textContent="";
+  const {error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:pass.value});
+  if(error){err.textContent="Connexion refusée : "+error.message;return}
+  load();
+}
+async function load(){
+  const err=document.getElementById("err");
+  const {data,error}=await sb.rpc("admin_stats");
+  if(error){err.textContent="Accès refusé ou erreur : "+error.message;return}
+  document.getElementById("login").style.display="none";
+  document.getElementById("out").innerHTML=
+   "<h2>Revenus</h2><div class='grid'>"+
+   card("Total confirmé",fmt(data.revenue_total)+" Ar")+
+   card("30 derniers jours",fmt(data.revenue_30d)+" Ar")+
+   card("Paiements en attente",data.payments_pending)+
+   card("Abonnements actifs",data.subs_active)+"</div>"+
+   "<h2>Utilisateurs</h2><div class='grid'>"+
+   card("Comptes",data.users_total)+
+   card("Vendeurs vérifiés",data.sellers_verified)+
+   card("CIN en attente",data.sellers_pending)+
+   card("CIN refusés",data.sellers_rejected)+"</div>"+
+   "<h2>Annonces</h2><div class='grid'>"+
+   card("Approuvées",data.listings_approved)+
+   card("En attente",data.listings_pending)+
+   card("Refusées",data.listings_rejected)+
+   card("Menus QR",data.menus)+"</div>"+
+   "<h2>Outils Services</h2><div class='grid'>"+card("Utilisations",data.tool_uses)+"</div>"+
+   "<h2>Nouveaux comptes par mois</h2>"+bars(data.users_by_month,"")+
+   "<h2>Revenus par mois</h2>"+bars(data.revenue_by_month," Ar")+
+   "<button onclick='sb.auth.signOut().then(()=>location.reload())' style='margin-top:20px'>Se déconnecter</button>";
+}
+sb.auth.getSession().then(({data})=>{if(data.session)load()});
+</script>
+</body>
+</html>
