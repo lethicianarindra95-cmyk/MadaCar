@@ -11,8 +11,8 @@ body{margin:0;font-family:Arial,sans-serif;background:#1a1a1a;color:#eee;padding
 h1{font-size:20px;margin:0 0 10px}h2{font-size:15px;color:#bbb;margin:20px 0 8px}
 input,button{padding:10px;border-radius:6px;border:0;font-size:15px;width:100%;box-sizing:border-box;margin-bottom:8px}
 button{background:#444;color:#fff}
-.tabs,.per{display:flex;gap:6px;margin-bottom:12px}
-.tabs button,.per button{margin:0;padding:9px 2px;font-size:13px;flex:1}
+.tabs,.per{display:flex;gap:5px;margin-bottom:12px}
+.tabs button,.per button{margin:0;padding:9px 1px;font-size:12px;flex:1}
 .on{background:#eee!important;color:#111!important}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .card{background:#2b2b2b;border-radius:8px;padding:12px}
@@ -40,6 +40,7 @@ td:last-child,th:last-child{text-align:right}
     <button id="t_rev" onclick="tab('rev')">Revenus</button>
     <button id="t_usr" onclick="tab('usr')">Utilisat.</button>
     <button id="t_lis" onclick="tab('lis')">Annonces</button>
+    <button id="t_srv" onclick="tab('srv')">Services</button>
   </div>
   <div class="per" id="per" style="display:none">
     <button data-d="7" onclick="period(7)">7 j</button>
@@ -91,6 +92,23 @@ td:last-child,th:last-child{text-align:right}
     <div class="box"><table id="l_plan"></table></div>
     <h2>10 dernières annonces</h2>
     <div class="box"><table id="l_last"></table></div>
+  </div>
+
+  <div id="v_srv" style="display:none">
+    <div class="card">
+      <span>Utilisations d'outils sur la période</span>
+      <div class="big" id="s_total">-</div>
+      <div id="s_var"></div>
+    </div>
+    <div class="box"><canvas id="c_srv" height="220"></canvas></div>
+    <h2>Aperçu</h2>
+    <div class="grid" id="s_cards"></div>
+    <h2>Par outil (période)</h2>
+    <div class="box"><table id="s_tool"></table></div>
+    <h2>10 dernières utilisations</h2>
+    <div class="box"><table id="s_uses"></table></div>
+    <h2>10 derniers menus QR</h2>
+    <div class="box"><table id="s_menus"></table></div>
   </div>
 
   <button onclick="sb.auth.signOut().then(()=>location.reload())" style="margin-top:20px">Se déconnecter</button>
@@ -155,7 +173,7 @@ async function start(){
 }
 function tab(t){
   curTab=t;
-  ["res","rev","usr","lis"].forEach(k=>{
+  ["res","rev","usr","lis","srv"].forEach(k=>{
     document.getElementById("v_"+k).style.display=k===t?"block":"none";
     document.getElementById("t_"+k).className=k===t?"on":"";
   });
@@ -168,6 +186,7 @@ async function period(d){
   if(curTab==="rev")await loadRev(d);
   else if(curTab==="usr")await loadUsr(d);
   else if(curTab==="lis")await loadLis(d);
+  else if(curTab==="srv")await loadSrv(d);
 }
 async function loadRev(d){
   const {data,error}=await sb.rpc("admin_revenue",{p_days:d});
@@ -219,6 +238,27 @@ async function loadLis(d){
   const ls=data.last||[];
   document.getElementById("l_last").innerHTML="<tr><th>Date</th><th>Annonce</th><th>Prix</th></tr>"+
     (ls.length?ls.map(x=>`<tr><td>${esc(x.t)}<br><small>${esc(STATUS[x.s]||x.s)}</small></td><td>${esc(x.title)}<br><small>${esc(x.city)}</small></td><td>${fmt(x.price)} Ar</td></tr>`).join(""):"<tr><td colspan='3'>Aucune annonce</td></tr>");
+}
+async function loadSrv(d){
+  const {data,error}=await sb.rpc("admin_services",{p_days:d});
+  if(error){document.getElementById("err").textContent="Erreur services : "+error.message;return}
+  document.getElementById("err").textContent="";
+  const tot=Number(data.total),prev=Number(data.prev_total);
+  document.getElementById("s_total").textContent=fmt(tot);
+  document.getElementById("s_var").innerHTML=variation(tot,prev,"");
+  draw("c_srv",data.series||[],tot>=prev,"");
+  document.getElementById("s_cards").innerHTML=
+    card("Utilisateurs d'outils",data.users)+card("Utilisations (total)",data.all_uses)+
+    card("Menus QR (total)",data.menus_all)+card("Nouveaux menus (période)",data.menus_new);
+  const bt=data.by_tool||[];
+  document.getElementById("s_tool").innerHTML="<tr><th>Outil</th><th>Comptes</th><th>Utilisations</th></tr>"+
+    (bt.length?bt.map(x=>`<tr><td>${esc(x.tool)}</td><td>${esc(x.u)}</td><td>${esc(x.n)}</td></tr>`).join(""):"<tr><td colspan='3'>Aucune utilisation</td></tr>");
+  const lu=data.last_uses||[];
+  document.getElementById("s_uses").innerHTML="<tr><th>Date</th><th>Compte</th><th>Outil</th></tr>"+
+    (lu.length?lu.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.e)}</td><td>${esc(x.tool)}</td></tr>`).join(""):"<tr><td colspan='3'>Aucune utilisation</td></tr>");
+  const lm=data.last_menus||[];
+  document.getElementById("s_menus").innerHTML="<tr><th>Date</th><th>Menu</th></tr>"+
+    (lm.length?lm.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.name)}<br><small>${esc(x.city)}</small></td></tr>`).join(""):"<tr><td colspan='2'>Aucun menu</td></tr>");
 }
 sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
