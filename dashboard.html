@@ -38,26 +38,45 @@ td:last-child,th:last-child{text-align:right}
   <div class="tabs">
     <button id="t_res" onclick="tab('res')">Résumé</button>
     <button id="t_rev" onclick="tab('rev')">Revenus</button>
+    <button id="t_usr" onclick="tab('usr')">Utilisateurs</button>
   </div>
+  <div class="per" id="per" style="display:none">
+    <button data-d="7" onclick="period(7)">7 j</button>
+    <button data-d="30" onclick="period(30)">30 j</button>
+    <button data-d="90" onclick="period(90)">90 j</button>
+    <button data-d="0" onclick="period(0)">Tout</button>
+  </div>
+
   <div id="v_res"></div>
+
   <div id="v_rev" style="display:none">
-    <div class="per">
-      <button data-d="7" onclick="period(7)">7 j</button>
-      <button data-d="30" onclick="period(30)">30 j</button>
-      <button data-d="90" onclick="period(90)">90 j</button>
-      <button data-d="0" onclick="period(0)">Tout</button>
-    </div>
     <div class="card">
       <span>Revenus de la période</span>
       <div class="big" id="r_total">-</div>
       <div id="r_var"></div>
     </div>
-    <div class="box"><canvas id="chart" height="220"></canvas></div>
+    <div class="box"><canvas id="c_rev" height="220"></canvas></div>
     <h2>Par forfait</h2>
     <div class="box"><table id="r_plan"></table></div>
     <h2>10 derniers paiements</h2>
     <div class="box"><table id="r_last"></table></div>
   </div>
+
+  <div id="v_usr" style="display:none">
+    <div class="card">
+      <span>Nouveaux comptes sur la période</span>
+      <div class="big" id="u_total">-</div>
+      <div id="u_var"></div>
+    </div>
+    <div class="box"><canvas id="c_usr" height="220"></canvas></div>
+    <h2>Vendeurs</h2>
+    <div class="grid" id="u_sellers"></div>
+    <h2>Abonnés actifs par forfait</h2>
+    <div class="box"><table id="u_plan"></table></div>
+    <h2>10 derniers inscrits</h2>
+    <div class="box"><table id="u_last"></table></div>
+  </div>
+
   <button onclick="sb.auth.signOut().then(()=>location.reload())" style="margin-top:20px">Se déconnecter</button>
 </div>
 <script>
@@ -66,9 +85,28 @@ const SUPABASE_KEY="sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const fmt=n=>Number(n||0).toLocaleString("fr-FR");
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const STATUS={confirmed:"Confirmé",pending:"En attente",rejected:"Refusé"};
-let chart=null,curDays=30;
+const STATUS={confirmed:"Confirmé",pending:"En attente",rejected:"Refusé",verified:"Vérifié","-":"Acheteur"};
+const charts={};
+let curTab="res",curDays=30;
 function card(t,v){return `<div class="card">${t}<b>${v}</b></div>`}
+
+function variation(tot,prev,unit){
+  if(prev>0){const p=(tot-prev)/prev*100;
+    return `<span class="${p>=0?"up":"down"}">${p>=0?"▲ +":"▼ "}${p.toFixed(1)} %</span> vs période précédente (${fmt(prev)}${unit})`}
+  if(tot>0)return `<span class="up">▲ Nouveau</span> (rien sur la période précédente)`;
+  return "Rien sur la période";
+}
+function draw(id,s,up,unit){
+  if(charts[id])charts[id].destroy();
+  const col=up?"#3ddc84":"#ff5c5c";
+  charts[id]=new Chart(document.getElementById(id),{
+    type:"line",
+    data:{labels:s.map(x=>x.d.slice(5)),datasets:[{data:s.map(x=>x.v),borderColor:col,backgroundColor:col+"33",fill:true,tension:.3,pointRadius:s.length>40?0:3,borderWidth:2}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)+unit}}},
+      scales:{x:{ticks:{color:"#aaa",maxTicksLimit:6},grid:{color:"#333"}},
+              y:{ticks:{color:"#aaa",callback:v=>fmt(v),precision:0},grid:{color:"#333"},beginAtZero:true}}}
+  });
+}
 
 async function connect(){
   const err=document.getElementById("err");err.textContent="";
@@ -94,47 +132,58 @@ async function start(){
    card("CIN refusés",data.sellers_rejected)+
    card("Annonces approuvées",data.listings_approved)+
    card("Annonces en attente",data.listings_pending)+
-   card("Annonces refusées",data.listings_refused||data.listings_rejected)+
+   card("Annonces refusées",data.listings_rejected)+
    card("Menus QR",data.menus)+
    card("Utilisations outils",data.tool_uses)+"</div>";
   tab("res");
 }
 function tab(t){
-  document.getElementById("v_res").style.display=t==="res"?"block":"none";
-  document.getElementById("v_rev").style.display=t==="rev"?"block":"none";
-  document.getElementById("t_res").className=t==="res"?"on":"";
-  document.getElementById("t_rev").className=t==="rev"?"on":"";
-  if(t==="rev")period(curDays);
+  curTab=t;
+  ["res","rev","usr"].forEach(k=>{
+    document.getElementById("v_"+k).style.display=k===t?"block":"none";
+    document.getElementById("t_"+k).className=k===t?"on":"";
+  });
+  document.getElementById("per").style.display=t==="res"?"none":"flex";
+  if(t!=="res")period(curDays);
 }
 async function period(d){
   curDays=d;
   document.querySelectorAll(".per button").forEach(b=>b.className=(Number(b.dataset.d)===d)?"on":"");
+  if(curTab==="rev")await loadRev(d);
+  else if(curTab==="usr")await loadUsr(d);
+}
+async function loadRev(d){
   const {data,error}=await sb.rpc("admin_revenue",{p_days:d});
   if(error){document.getElementById("err").textContent="Erreur revenus : "+error.message;return}
   document.getElementById("err").textContent="";
   const tot=Number(data.total),prev=Number(data.prev_total);
   document.getElementById("r_total").textContent=fmt(tot)+" Ar";
-  let v;
-  if(prev>0){const p=(tot-prev)/prev*100;v=`<span class="${p>=0?"up":"down"}">${p>=0?"▲ +":"▼ "}${p.toFixed(1)} %</span> vs période précédente (${fmt(prev)} Ar)`}
-  else if(tot>0){v=`<span class="up">▲ Nouveau</span> (rien sur la période précédente)`}
-  else{v="Aucun revenu sur la période"}
-  document.getElementById("r_var").innerHTML=v;
-  const up=tot>=prev;
-  const col=up?"#3ddc84":"#ff5c5c";
-  const s=data.series||[];
-  if(chart)chart.destroy();
-  chart=new Chart(document.getElementById("chart"),{
-    type:"line",
-    data:{labels:s.map(x=>x.d.slice(5)),datasets:[{data:s.map(x=>x.v),borderColor:col,backgroundColor:col+"33",fill:true,tension:.3,pointRadius:s.length>40?0:3,borderWidth:2}]},
-    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)+" Ar"}}},
-      scales:{x:{ticks:{color:"#aaa",maxTicksLimit:6},grid:{color:"#333"}},y:{ticks:{color:"#aaa",callback:v=>fmt(v)},grid:{color:"#333"},beginAtZero:true}}}
-  });
+  document.getElementById("r_var").innerHTML=variation(tot,prev," Ar");
+  draw("c_rev",data.series||[],tot>=prev," Ar");
   const bp=data.by_plan||[];
   document.getElementById("r_plan").innerHTML="<tr><th>Forfait</th><th>Paiements</th><th>Montant</th></tr>"+
     (bp.length?bp.map(x=>`<tr><td>${esc(x.plan)}</td><td>${esc(x.n)}</td><td>${fmt(x.v)} Ar</td></tr>`).join(""):"<tr><td colspan='3'>Aucun paiement</td></tr>");
   const ls=data.last||[];
   document.getElementById("r_last").innerHTML="<tr><th>Date</th><th>Réf. MVola</th><th>Montant</th></tr>"+
     (ls.length?ls.map(x=>`<tr><td>${esc(x.t)}<br><small>${esc(STATUS[x.s]||x.s)}</small></td><td>${esc(x.ref)}</td><td>${fmt(x.a)} Ar</td></tr>`).join(""):"<tr><td colspan='3'>Aucun paiement</td></tr>");
+}
+async function loadUsr(d){
+  const {data,error}=await sb.rpc("admin_users",{p_days:d});
+  if(error){document.getElementById("err").textContent="Erreur utilisateurs : "+error.message;return}
+  document.getElementById("err").textContent="";
+  const tot=Number(data.total),prev=Number(data.prev_total);
+  document.getElementById("u_total").textContent=fmt(tot);
+  document.getElementById("u_var").innerHTML=variation(tot,prev,"");
+  draw("c_usr",data.series||[],tot>=prev,"");
+  document.getElementById("u_sellers").innerHTML=
+    card("Comptes au total",data.accounts)+card("Vendeurs vérifiés",data.verified)+
+    card("CIN en attente",data.pending)+card("CIN refusés",data.rejected);
+  const bp=data.by_plan||[];
+  document.getElementById("u_plan").innerHTML="<tr><th>Forfait</th><th>Vendeurs</th></tr>"+
+    (bp.length?bp.map(x=>`<tr><td>${esc(x.plan)}</td><td>${esc(x.n)}</td></tr>`).join(""):"<tr><td colspan='2'>Aucun abonné actif</td></tr>");
+  const ls=data.last||[];
+  document.getElementById("u_last").innerHTML="<tr><th>Date</th><th>Email</th><th>Statut</th></tr>"+
+    ls.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.e)}</td><td>${esc(STATUS[x.s]||x.s)}</td></tr>`).join("");
 }
 sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
