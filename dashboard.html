@@ -5,17 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MadaCar - Tableau de bord</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 body{margin:0;font-family:Arial,sans-serif;background:#1a1a1a;color:#eee;padding:14px}
-h1{font-size:20px}h2{font-size:15px;color:#bbb;margin:22px 0 8px}
+h1{font-size:20px;margin:0 0 10px}h2{font-size:15px;color:#bbb;margin:20px 0 8px}
 input,button{padding:10px;border-radius:6px;border:0;font-size:15px;width:100%;box-sizing:border-box;margin-bottom:8px}
-button{background:#555;color:#fff}
+button{background:#444;color:#fff}
+.tabs,.per{display:flex;gap:6px;margin-bottom:12px}
+.tabs button,.per button{margin:0;padding:9px 4px;font-size:14px;flex:1}
+.on{background:#eee!important;color:#111!important}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .card{background:#2b2b2b;border-radius:8px;padding:12px}
-.card b{display:block;font-size:22px;margin-top:4px}
-.bar{display:flex;align-items:center;margin:4px 0;font-size:13px}
-.bar span:first-child{width:62px}
-.bar i{display:block;height:14px;background:#999;border-radius:3px;margin:0 8px}
+.card b{display:block;font-size:20px;margin-top:4px}
+.big{font-size:30px;font-weight:bold}
+.up{color:#3ddc84}.down{color:#ff5c5c}
+.box{background:#2b2b2b;border-radius:8px;padding:10px;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 4px;text-align:left;border-bottom:1px solid #3a3a3a}
+td:last-child,th:last-child{text-align:right}
 #err{color:#f66}
 </style>
 </head>
@@ -27,51 +34,109 @@ button{background:#555;color:#fff}
   <button onclick="connect()">Se connecter</button>
 </div>
 <p id="err"></p>
-<div id="out"></div>
+<div id="app" style="display:none">
+  <div class="tabs">
+    <button id="t_res" onclick="tab('res')">Résumé</button>
+    <button id="t_rev" onclick="tab('rev')">Revenus</button>
+  </div>
+  <div id="v_res"></div>
+  <div id="v_rev" style="display:none">
+    <div class="per">
+      <button data-d="7" onclick="period(7)">7 j</button>
+      <button data-d="30" onclick="period(30)">30 j</button>
+      <button data-d="90" onclick="period(90)">90 j</button>
+      <button data-d="0" onclick="period(0)">Tout</button>
+    </div>
+    <div class="card">
+      <span>Revenus de la période</span>
+      <div class="big" id="r_total">-</div>
+      <div id="r_var"></div>
+    </div>
+    <div class="box"><canvas id="chart" height="220"></canvas></div>
+    <h2>Par forfait</h2>
+    <div class="box"><table id="r_plan"></table></div>
+    <h2>10 derniers paiements</h2>
+    <div class="box"><table id="r_last"></table></div>
+  </div>
+  <button onclick="sb.auth.signOut().then(()=>location.reload())" style="margin-top:20px">Se déconnecter</button>
+</div>
 <script>
 const SUPABASE_URL="https://cpdksgligvxukghiform.supabase.co";
 const SUPABASE_KEY="sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const fmt=n=>Number(n||0).toLocaleString("fr-FR");
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const STATUS={confirmed:"Confirmé",pending:"En attente",rejected:"Refusé"};
+let chart=null,curDays=30;
 function card(t,v){return `<div class="card">${t}<b>${v}</b></div>`}
-function bars(arr,unit){
-  if(!arr||!arr.length)return "<p>Pas encore de données.</p>";
-  const max=Math.max(...arr.map(x=>Number(x.n)),1);
-  return arr.map(x=>`<div class="bar"><span>${x.m}</span><i style="width:${Math.max(4,Number(x.n)/max*55)}%"></i><span>${fmt(x.n)}${unit}</span></div>`).join("");
-}
+
 async function connect(){
   const err=document.getElementById("err");err.textContent="";
   const {error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:pass.value});
   if(error){err.textContent="Connexion refusée : "+error.message;return}
-  load();
+  start();
 }
-async function load(){
+async function start(){
   const err=document.getElementById("err");
   const {data,error}=await sb.rpc("admin_stats");
   if(error){err.textContent="Accès refusé ou erreur : "+error.message;return}
   document.getElementById("login").style.display="none";
-  document.getElementById("out").innerHTML=
-   "<h2>Revenus</h2><div class='grid'>"+
-   card("Total confirmé",fmt(data.revenue_total)+" Ar")+
+  document.getElementById("app").style.display="block";
+  document.getElementById("v_res").innerHTML=
+   "<div class='grid'>"+
+   card("Revenu total",fmt(data.revenue_total)+" Ar")+
    card("30 derniers jours",fmt(data.revenue_30d)+" Ar")+
    card("Paiements en attente",data.payments_pending)+
-   card("Abonnements actifs",data.subs_active)+"</div>"+
-   "<h2>Utilisateurs</h2><div class='grid'>"+
+   card("Abonnements actifs",data.subs_active)+
    card("Comptes",data.users_total)+
    card("Vendeurs vérifiés",data.sellers_verified)+
    card("CIN en attente",data.sellers_pending)+
-   card("CIN refusés",data.sellers_rejected)+"</div>"+
-   "<h2>Annonces</h2><div class='grid'>"+
-   card("Approuvées",data.listings_approved)+
-   card("En attente",data.listings_pending)+
-   card("Refusées",data.listings_rejected)+
-   card("Menus QR",data.menus)+"</div>"+
-   "<h2>Outils Services</h2><div class='grid'>"+card("Utilisations",data.tool_uses)+"</div>"+
-   "<h2>Nouveaux comptes par mois</h2>"+bars(data.users_by_month,"")+
-   "<h2>Revenus par mois</h2>"+bars(data.revenue_by_month," Ar")+
-   "<button onclick='sb.auth.signOut().then(()=>location.reload())' style='margin-top:20px'>Se déconnecter</button>";
+   card("CIN refusés",data.sellers_rejected)+
+   card("Annonces approuvées",data.listings_approved)+
+   card("Annonces en attente",data.listings_pending)+
+   card("Annonces refusées",data.listings_refused||data.listings_rejected)+
+   card("Menus QR",data.menus)+
+   card("Utilisations outils",data.tool_uses)+"</div>";
+  tab("res");
 }
-sb.auth.getSession().then(({data})=>{if(data.session)load()});
+function tab(t){
+  document.getElementById("v_res").style.display=t==="res"?"block":"none";
+  document.getElementById("v_rev").style.display=t==="rev"?"block":"none";
+  document.getElementById("t_res").className=t==="res"?"on":"";
+  document.getElementById("t_rev").className=t==="rev"?"on":"";
+  if(t==="rev")period(curDays);
+}
+async function period(d){
+  curDays=d;
+  document.querySelectorAll(".per button").forEach(b=>b.className=(Number(b.dataset.d)===d)?"on":"");
+  const {data,error}=await sb.rpc("admin_revenue",{p_days:d});
+  if(error){document.getElementById("err").textContent="Erreur revenus : "+error.message;return}
+  document.getElementById("err").textContent="";
+  const tot=Number(data.total),prev=Number(data.prev_total);
+  document.getElementById("r_total").textContent=fmt(tot)+" Ar";
+  let v;
+  if(prev>0){const p=(tot-prev)/prev*100;v=`<span class="${p>=0?"up":"down"}">${p>=0?"▲ +":"▼ "}${p.toFixed(1)} %</span> vs période précédente (${fmt(prev)} Ar)`}
+  else if(tot>0){v=`<span class="up">▲ Nouveau</span> (rien sur la période précédente)`}
+  else{v="Aucun revenu sur la période"}
+  document.getElementById("r_var").innerHTML=v;
+  const up=tot>=prev;
+  const col=up?"#3ddc84":"#ff5c5c";
+  const s=data.series||[];
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById("chart"),{
+    type:"line",
+    data:{labels:s.map(x=>x.d.slice(5)),datasets:[{data:s.map(x=>x.v),borderColor:col,backgroundColor:col+"33",fill:true,tension:.3,pointRadius:s.length>40?0:3,borderWidth:2}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)+" Ar"}}},
+      scales:{x:{ticks:{color:"#aaa",maxTicksLimit:6},grid:{color:"#333"}},y:{ticks:{color:"#aaa",callback:v=>fmt(v)},grid:{color:"#333"},beginAtZero:true}}}
+  });
+  const bp=data.by_plan||[];
+  document.getElementById("r_plan").innerHTML="<tr><th>Forfait</th><th>Paiements</th><th>Montant</th></tr>"+
+    (bp.length?bp.map(x=>`<tr><td>${esc(x.plan)}</td><td>${esc(x.n)}</td><td>${fmt(x.v)} Ar</td></tr>`).join(""):"<tr><td colspan='3'>Aucun paiement</td></tr>");
+  const ls=data.last||[];
+  document.getElementById("r_last").innerHTML="<tr><th>Date</th><th>Réf. MVola</th><th>Montant</th></tr>"+
+    (ls.length?ls.map(x=>`<tr><td>${esc(x.t)}<br><small>${esc(STATUS[x.s]||x.s)}</small></td><td>${esc(x.ref)}</td><td>${fmt(x.a)} Ar</td></tr>`).join(""):"<tr><td colspan='3'>Aucun paiement</td></tr>");
+}
+sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
 </body>
 </html>
