@@ -12,7 +12,7 @@ h1{font-size:20px;margin:0 0 10px}h2{font-size:15px;color:#bbb;margin:20px 0 8px
 input,button{padding:10px;border-radius:6px;border:0;font-size:15px;width:100%;box-sizing:border-box;margin-bottom:8px}
 button{background:#444;color:#fff}
 .tabs,.per{display:flex;gap:6px;margin-bottom:12px}
-.tabs button,.per button{margin:0;padding:9px 4px;font-size:14px;flex:1}
+.tabs button,.per button{margin:0;padding:9px 2px;font-size:13px;flex:1}
 .on{background:#eee!important;color:#111!important}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .card{background:#2b2b2b;border-radius:8px;padding:12px}
@@ -38,7 +38,8 @@ td:last-child,th:last-child{text-align:right}
   <div class="tabs">
     <button id="t_res" onclick="tab('res')">Résumé</button>
     <button id="t_rev" onclick="tab('rev')">Revenus</button>
-    <button id="t_usr" onclick="tab('usr')">Utilisateurs</button>
+    <button id="t_usr" onclick="tab('usr')">Utilisat.</button>
+    <button id="t_lis" onclick="tab('lis')">Annonces</button>
   </div>
   <div class="per" id="per" style="display:none">
     <button data-d="7" onclick="period(7)">7 j</button>
@@ -77,6 +78,21 @@ td:last-child,th:last-child{text-align:right}
     <div class="box"><table id="u_last"></table></div>
   </div>
 
+  <div id="v_lis" style="display:none">
+    <div class="card">
+      <span>Annonces publiées sur la période</span>
+      <div class="big" id="l_total">-</div>
+      <div id="l_var"></div>
+    </div>
+    <div class="box"><canvas id="c_lis" height="220"></canvas></div>
+    <h2>Statuts (au total)</h2>
+    <div class="grid" id="l_status"></div>
+    <h2>Par forfait du vendeur</h2>
+    <div class="box"><table id="l_plan"></table></div>
+    <h2>10 dernières annonces</h2>
+    <div class="box"><table id="l_last"></table></div>
+  </div>
+
   <button onclick="sb.auth.signOut().then(()=>location.reload())" style="margin-top:20px">Se déconnecter</button>
 </div>
 <script>
@@ -85,7 +101,7 @@ const SUPABASE_KEY="sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const fmt=n=>Number(n||0).toLocaleString("fr-FR");
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const STATUS={confirmed:"Confirmé",pending:"En attente",rejected:"Refusé",verified:"Vérifié","-":"Acheteur"};
+const STATUS={confirmed:"Confirmé",pending:"En attente",rejected:"Refusé",verified:"Vérifié",approved:"Approuvée","-":"Acheteur"};
 const charts={};
 let curTab="res",curDays=30;
 function card(t,v){return `<div class="card">${t}<b>${v}</b></div>`}
@@ -139,7 +155,7 @@ async function start(){
 }
 function tab(t){
   curTab=t;
-  ["res","rev","usr"].forEach(k=>{
+  ["res","rev","usr","lis"].forEach(k=>{
     document.getElementById("v_"+k).style.display=k===t?"block":"none";
     document.getElementById("t_"+k).className=k===t?"on":"";
   });
@@ -151,6 +167,7 @@ async function period(d){
   document.querySelectorAll(".per button").forEach(b=>b.className=(Number(b.dataset.d)===d)?"on":"");
   if(curTab==="rev")await loadRev(d);
   else if(curTab==="usr")await loadUsr(d);
+  else if(curTab==="lis")await loadLis(d);
 }
 async function loadRev(d){
   const {data,error}=await sb.rpc("admin_revenue",{p_days:d});
@@ -184,6 +201,24 @@ async function loadUsr(d){
   const ls=data.last||[];
   document.getElementById("u_last").innerHTML="<tr><th>Date</th><th>Email</th><th>Statut</th></tr>"+
     ls.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.e)}</td><td>${esc(STATUS[x.s]||x.s)}</td></tr>`).join("");
+}
+async function loadLis(d){
+  const {data,error}=await sb.rpc("admin_listings",{p_days:d});
+  if(error){document.getElementById("err").textContent="Erreur annonces : "+error.message;return}
+  document.getElementById("err").textContent="";
+  const tot=Number(data.total),prev=Number(data.prev_total);
+  document.getElementById("l_total").textContent=fmt(tot);
+  document.getElementById("l_var").innerHTML=variation(tot,prev,"");
+  draw("c_lis",data.series||[],tot>=prev,"");
+  document.getElementById("l_status").innerHTML=
+    card("Approuvées",data.approved)+card("En attente",data.pending)+
+    card("Refusées",data.rejected)+card("Total",data.all);
+  const bp=data.by_plan||[];
+  document.getElementById("l_plan").innerHTML="<tr><th>Forfait</th><th>Annonces</th></tr>"+
+    (bp.length?bp.map(x=>`<tr><td>${esc(x.plan)}</td><td>${esc(x.n)}</td></tr>`).join(""):"<tr><td colspan='2'>Aucune annonce</td></tr>");
+  const ls=data.last||[];
+  document.getElementById("l_last").innerHTML="<tr><th>Date</th><th>Annonce</th><th>Prix</th></tr>"+
+    (ls.length?ls.map(x=>`<tr><td>${esc(x.t)}<br><small>${esc(STATUS[x.s]||x.s)}</small></td><td>${esc(x.title)}<br><small>${esc(x.city)}</small></td><td>${fmt(x.price)} Ar</td></tr>`).join(""):"<tr><td colspan='3'>Aucune annonce</td></tr>");
 }
 sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
