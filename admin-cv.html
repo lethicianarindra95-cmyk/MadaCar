@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MadaCar – Paiements CV</title>
+<style>
+:root{--bg:#111;--card:#1c1c1c;--line:#333;--txt:#eee;--mut:#999}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,sans-serif;padding:14px}
+h1{font-size:20px;margin:0 0 12px}
+h2{font-size:15px;margin:18px 0 8px;color:#e6b800}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input{width:100%;padding:11px;background:#222;border:1px solid var(--line);color:var(--txt);border-radius:8px;font-size:15px}
+.btn{padding:12px;border:0;border-radius:8px;background:#555;color:#fff;font-size:15px}
+.ok{background:#1f9d55}
+.no{background:#8a2c2c}
+.item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.ref{font-size:18px;font-weight:700;color:#e6b800;word-break:break-all}
+.mut{color:var(--mut);font-size:13px;margin-top:4px}
+.row{display:flex;gap:8px;margin-top:10px}
+.row .btn{flex:1}
+#msg{margin:10px 0;color:#e6b800;font-size:14px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<h1>Paiements CV (admin)</h1>
+<div id="msg"></div>
+
+<div id="login" class="hide">
+  <label>Email</label><input id="email" type="email">
+  <label>Mot de passe</label><input id="pass" type="password">
+  <button class="btn" id="btnLogin" style="width:100%;margin-top:12px">Connexion</button>
+</div>
+
+<div id="app" class="hide">
+  <h2>En attente</h2><div id="pending"></div>
+  <h2>Derniers traités</h2><div id="done"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const sb = window.supabase.createClient("https://cpdksgligvxukghiform.supabase.co", "sb_publishable_GLIcl2WMc9fmTX7Pr23Dzw_uFF_Ttp1");
+const $ = id => document.getElementById(id);
+function say(t){ $("msg").textContent = t || ""; }
+function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; }
+function fmtDate(s){ return new Date(s).toLocaleString("fr-FR", { timeZone:"Indian/Antananarivo" }); }
+const LABELS = { confirmed:"confirmé, crédit pas encore utilisé", used:"confirmé et utilisé", rejected:"refusé" };
+
+async function decide(id, status){
+  say("Enregistrement...");
+  const r = await sb.from("cv_purchases")
+    .update({ status: status, reviewed_at: new Date().toISOString() })
+    .eq("id", id).eq("status", "pending");
+  if(r.error){ say("Erreur : " + r.error.message); return; }
+  say(status === "confirmed" ? "Paiement confirmé : l'utilisateur a 1 crédit CV." : "Demande refusée.");
+  load();
+}
+
+async function load(){
+  const r = await sb.from("cv_purchases")
+    .select("id,user_id,mvola_reference,amount_ar,status,created_at")
+    .order("created_at", { ascending:false }).limit(60);
+  if(r.error){ say("Erreur : " + r.error.message); return; }
+  const p = $("pending"), d = $("done");
+  p.innerHTML = ""; d.innerHTML = "";
+  let np = 0;
+  r.data.forEach(x => {
+    const box = el("div", "item");
+    box.appendChild(el("div", "ref", x.mvola_reference));
+    box.appendChild(el("div", "mut", x.amount_ar.toLocaleString("fr-FR") + " Ar · " + fmtDate(x.created_at) + " · compte " + x.user_id.slice(0, 8)));
+    if(x.status === "pending"){
+      np++;
+      const row = el("div", "row");
+      const b1 = el("button", "btn ok", "Confirmer");
+      b1.onclick = () => decide(x.id, "confirmed");
+      const b2 = el("button", "btn no", "Refuser");
+      b2.onclick = () => decide(x.id, "rejected");
+      row.appendChild(b1); row.appendChild(b2);
+      box.appendChild(row); p.appendChild(box);
+    } else {
+      box.appendChild(el("div", "mut", "Statut : " + (LABELS[x.status] || x.status)));
+      d.appendChild(box);
+    }
+  });
+  if(!np) p.appendChild(el("div", "mut", "Aucune demande en attente."));
+}
+
+async function init(){
+  const s = await sb.auth.getSession();
+  if(!s.data.session){ $("login").classList.remove("hide"); return; }
+  const a = await sb.rpc("is_admin");
+  if(!a.error && a.data !== true){
+    say("Ce compte n'est pas admin. Connecte-toi avec ton compte admin.");
+    await sb.auth.signOut();
+    $("login").classList.remove("hide");
+    return;
+  }
+  $("login").classList.add("hide");
+  $("app").classList.remove("hide");
+  say("");
+  load();
+}
+
+$("btnLogin").onclick = async () => {
+  say("Connexion...");
+  const r = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pass").value });
+  if(r.error){ say("Erreur : " + r.error.message); return; }
+  say(""); init();
+};
+
+init();
+</script>
+</body>
+</html>
