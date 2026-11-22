@@ -238,6 +238,64 @@ $("btnPdf").onclick = async () => {
 
 drawLists();
 renderCV();
+async function refreshBuy(){
+  const s = $("buystatus");
+  const ses = await sb.auth.getSession();
+  if(!ses.data.session){ s.textContent = "Connecte-toi pour acheter un CV sans filigrane."; return; }
+  const r = await sb.from("cv_purchases").select("status").eq("user_id", ses.data.session.user.id).in("status", ["pending","confirmed"]);
+  if(r.error){ s.textContent = ""; return; }
+  const p = r.data.filter(x => x.status === "pending").length;
+  const c = r.data.filter(x => x.status === "confirmed").length;
+  s.textContent = "Crédits CV disponibles : " + c + (p ? " · demande(s) en attente : " + p : "");
+}
+$("btnBuy").onclick = async () => {
+  const ref = $("mvref").value.trim();
+  const s = $("buystatus");
+  if(ref.length < 4){ s.textContent = "Écris ta référence MVola."; return; }
+  const ses = await sb.auth.getSession();
+  if(!ses.data.session){ s.textContent = "Connecte-toi d'abord (page Accueil ou Inscription)."; return; }
+  $("btnBuy").disabled = true;
+  const r = await sb.from("cv_purchases").insert({ user_id: ses.data.session.user.id, mvola_reference: ref });
+  $("btnBuy").disabled = false;
+  if(r.error){ s.textContent = "Erreur : " + r.error.message; return; }
+  $("mvref").value = "";
+  await refreshBuy();
+};
+$("btnPdf").onclick = async () => {
+  if(!$("nom").value.trim()){ alert("Écris au moins ton nom avant de télécharger."); return; }
+  let wm = true;
+  $("btnPdf").disabled = true;
+  try{
+    const ses = await sb.auth.getSession();
+    if(ses.data.session){
+      const r = await sb.rpc("use_tool", { p_tool: "cv" });
+      const res = r.data;
+      if(!r.error && res && res.ok && res.plan !== "free"){
+        wm = false;
+        status(res.limit >= 1000 ? "CV sans filigrane (forfait VIP)." : "CV sans filigrane. Il te reste " + (res.limit - res.used) + " CV propre(s) aujourd’hui.");
+      }
+      if(wm){
+        const c = await sb.rpc("use_cv_credit");
+        if(!c.error && c.data && c.data.ok){
+          wm = false;
+          status("CV sans filigrane (1 crédit utilisé).");
+          refreshBuy();
+        } else {
+          status("Version gratuite avec filigrane. Pour un CV propre : achète un CV ci-dessus ou", "choisis un forfait", "abonnement.html");
+        }
+      }
+    } else {
+      status("Version gratuite avec filigrane. Connecte-toi pour acheter un CV propre.", "Se connecter", "index.html");
+    }
+  }catch(e){
+    status("Version gratuite avec filigrane.");
+  }finally{
+    $("btnPdf").disabled = false;
+  }
+  $("cvwrap").classList.toggle("wm-on", wm);
+  window.print();
+};
+refreshBuy();
 </script>
 </body>
 </html>
