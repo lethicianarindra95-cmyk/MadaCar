@@ -184,7 +184,7 @@ async function start(){
   setInterval(loadBell,60000);
   tab("res");
 }
-async function loadBellOld(){
+async function loadBell(){
   const {data,error}=await sb.rpc("admin_pending_counts");
   const b=document.getElementById("bell");
   if(error||!data){b.style.display="none";return}
@@ -198,15 +198,17 @@ async function loadBellOld(){
   const n=items.reduce((a,x)=>a+Number(x[0]),0);
   b.innerHTML="🔔 <b>"+n+" en attente</b><br>"+items.map(x=>`<a href="${x[2]}">${x[0]} ${x[1]}</a>`).join(" · ");
   b.style.display="block";
-}function tabOld(t){
+function tab(t){
   curTab=t;
-  ["res","rev","usr","lis","srv"].forEach(k=>{
+  ["res","rev","usr","lis","srv","rep"].forEach(k=>{
     document.getElementById("v_"+k).style.display=k===t?"block":"none";
     document.getElementById("t_"+k).className=k===t?"on":"";
   });
-  document.getElementById("per").style.display=t==="res"?"none":"flex";
-  if(t!=="res")period(curDays);
+  document.getElementById("per").style.display=(t==="res"||t==="rep")?"none":"flex";
+  if(t==="rep"){ if(typeof loadRep==="function") loadRep(); }
+  else if(t!=="res") period(curDays);
 }
+ 
 async function period(d){
   curDays=d;
   document.querySelectorAll(".per button").forEach(b=>b.className=(Number(b.dataset.d)===d)?"on":"");
