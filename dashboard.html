@@ -47,6 +47,7 @@ td:last-child,th:last-child{text-align:right}
     <button id="t_usr" onclick="tab('usr')">Utilisat.</button>
     <button id="t_lis" onclick="tab('lis')">Annonces</button>
     <button id="t_srv" onclick="tab('srv')">Services</button>
+    <button id="t_rep" onclick="tab('rep')">Signal.</button>
   </div>
   <div class="per" id="per" style="display:none">
     <button data-d="7" onclick="period(7)">7 j</button>
@@ -117,6 +118,10 @@ td:last-child,th:last-child{text-align:right}
     <div class="box"><table id="s_menus"></table></div>
   </div>
 
+  <div id="v_rep" style="display:none">
+    <h2>Signalements en attente</h2>
+    <div id="rep_list"></div>
+  </div>
   <button onclick="sb.auth.signOut().then(()=>location.reload())" style="margin-top:20px">Se déconnecter</button>
 </div>
 <script>
@@ -179,7 +184,7 @@ async function start(){
   setInterval(loadBell,60000);
   tab("res");
 }
-async function loadBell(){
+async function loadBellOld(){
   const {data,error}=await sb.rpc("admin_pending_counts");
   const b=document.getElementById("bell");
   if(error||!data){b.style.display="none";return}
@@ -193,7 +198,7 @@ async function loadBell(){
   const n=items.reduce((a,x)=>a+Number(x[0]),0);
   b.innerHTML="🔔 <b>"+n+" en attente</b><br>"+items.map(x=>`<a href="${x[2]}">${x[0]} ${x[1]}</a>`).join(" · ");
   b.style.display="block";
-}function tab(t){
+}function tabOld(t){
   curTab=t;
   ["res","rev","usr","lis","srv"].forEach(k=>{
     document.getElementById("v_"+k).style.display=k===t?"block":"none";
@@ -282,6 +287,7 @@ async function loadSrv(d){
   document.getElementById("s_menus").innerHTML="<tr><th>Date</th><th>Menu</th></tr>"+
     (lm.length?lm.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.name)}<br><small>${esc(x.city)}</small></td></tr>`).join(""):"<tr><td colspan='2'>Aucun menu</td></tr>");
 }
+sb.auth.getSession().then(({data})=>{if(data.session)start()});
 sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
 </body>
