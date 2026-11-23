@@ -290,6 +290,24 @@ async function loadSrv(d){
   document.getElementById("s_menus").innerHTML="<tr><th>Date</th><th>Menu</th></tr>"+
     (lm.length?lm.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.name)}<br><small>${esc(x.city)}</small></td></tr>`).join(""):"<tr><td colspan='2'>Aucun menu</td></tr>");
 }
+async function loadRep(){
+  const box=document.getElementById("rep_list");
+  const {data,error}=await sb.rpc("admin_reports");
+  if(error){document.getElementById("err").textContent="Erreur signalements : "+error.message;return}
+  document.getElementById("err").textContent="";
+  const ls=data||[];
+  if(!ls.length){box.innerHTML="<div class='rep'>Aucun signalement en attente 👍</div>";return}
+  const known=["id","reason","details","title","city"];
+  box.innerHTML=ls.map(x=>{
+    const extra=Object.keys(x).filter(k=>!known.includes(k)&&x[k]!=null&&x[k]!=="").map(k=>esc(k)+" : "+esc(x[k])).join("<br>");
+    return `<div class="rep"><b>${esc(x.title||"Annonce supprimée")}</b> <small>${esc(x.city||"")}</small><br>Motif : ${esc(x.reason)}<br>${x.details?esc(x.details)+"<br>":""}<small>${extra}</small><div class="acts"><button onclick="handleRep(${Number(x.id)},'remove')">Retirer l'annonce</button><button onclick="handleRep(${Number(x.id)},'dismiss')">Ignorer</button></div></div>`}).join("");
+}
+async function handleRep(id,action){
+  if(action==="remove"&&!confirm("Retirer cette annonce ?"))return;
+  const {error}=await sb.rpc("admin_handle_report",{p_id:id,p_action:action});
+  if(error){document.getElementById("err").textContent="Erreur : "+error.message;return}
+  await loadRep();loadBell();
+}
 sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
 </body>
