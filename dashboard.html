@@ -192,7 +192,8 @@ async function loadBell(){
     [data.payments,"paiement(s) MVola","admin.html"],
     [data.cv,"crédit(s) CV","admin-cv.html"],
     [data.listings,"annonce(s)","moderation.html"],
-    [data.verifications,"vérification(s) CIN","admin.html"]
+    [data.verifications,"vérification(s) CIN","admin.html"],
+    [data.reports,"signalement(s)","javascript:tab('rep')"]
   ].filter(x=>Number(x[0])>0);
   if(!items.length){b.style.display="none";return}
   const n=items.reduce((a,x)=>a+Number(x[0]),0);
