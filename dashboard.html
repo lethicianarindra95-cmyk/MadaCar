@@ -198,6 +198,7 @@ async function loadBell(){
   const n=items.reduce((a,x)=>a+Number(x[0]),0);
   b.innerHTML="🔔 <b>"+n+" en attente</b><br>"+items.map(x=>`<a href="${x[2]}">${x[0]} ${x[1]}</a>`).join(" · ");
   b.style.display="block";
+}
 function tab(t){
   curTab=t;
   ["res","rev","usr","lis","srv","rep"].forEach(k=>{
@@ -289,7 +290,6 @@ async function loadSrv(d){
   document.getElementById("s_menus").innerHTML="<tr><th>Date</th><th>Menu</th></tr>"+
     (lm.length?lm.map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.name)}<br><small>${esc(x.city)}</small></td></tr>`).join(""):"<tr><td colspan='2'>Aucun menu</td></tr>");
 }
-sb.auth.getSession().then(({data})=>{if(data.session)start()});
 sb.auth.getSession().then(({data})=>{if(data.session)start()});
 </script>
 </body>
