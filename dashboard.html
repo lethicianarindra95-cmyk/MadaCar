@@ -172,9 +172,25 @@ async function start(){
    card("Annonces refusées",data.listings_rejected)+
    card("Menus QR",data.menus)+
    card("Utilisations outils",data.tool_uses)+"</div>";
+    loadBell();
+  setInterval(loadBell,60000);
   tab("res");
 }
-function tab(t){
+async function loadBell(){
+  const {data,error}=await sb.rpc("admin_pending_counts");
+  const b=document.getElementById("bell");
+  if(error||!data){b.style.display="none";return}
+  const items=[
+    [data.payments,"paiement(s) MVola","admin.html"],
+    [data.cv,"crédit(s) CV","admin-cv.html"],
+    [data.listings,"annonce(s)","moderation.html"],
+    [data.verifications,"vérification(s) CIN","admin.html"]
+  ].filter(x=>Number(x[0])>0);
+  if(!items.length){b.style.display="none";return}
+  const n=items.reduce((a,x)=>a+Number(x[0]),0);
+  b.innerHTML="🔔 <b>"+n+" en attente</b><br>"+items.map(x=>`<a href="${x[2]}">${x[0]} ${x[1]}</a>`).join(" · ");
+  b.style.display="block";
+}function tab(t){
   curTab=t;
   ["res","rev","usr","lis","srv"].forEach(k=>{
     document.getElementById("v_"+k).style.display=k===t?"block":"none";
