@@ -203,7 +203,40 @@ async function partager(l){
   try{ await navigator.clipboard.writeText(url); alert("Lien copié : " + url); }
   catch(e){ prompt("Copie ce lien :", url); }
 }
-
+function signaler(l){
+  const motifs = ["Arnaque suspectée","Déjà vendu","Photos ou prix trompeurs","Autre"];
+  const ov = el("div");
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:16px;z-index:100";
+  const box = el("div");
+  box.style.cssText = "background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;width:100%;max-width:420px";
+  box.appendChild(el("h3","","Signaler cette annonce"));
+  const sel = document.createElement("select");
+  sel.style.cssText = "width:100%;padding:11px;background:#222;color:#eee;border:1px solid #333;border-radius:8px;font-size:16px;margin:8px 0";
+  motifs.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m; sel.appendChild(o); });
+  const det = document.createElement("textarea");
+  det.placeholder = "Détails (facultatif)"; det.maxLength = 500;
+  det.style.cssText = "width:100%;min-height:80px;padding:11px;background:#222;color:#eee;border:1px solid #333;border-radius:8px;font-size:16px;font-family:inherit";
+  const msg = el("div");
+  msg.style.cssText = "color:#e6b800;font-size:14px;margin:8px 0";
+  const send = el("button","back","Envoyer le signalement");
+  send.style.cssText = "width:100%;margin-top:8px";
+  const cancel = el("button","back","Annuler");
+  cancel.style.cssText = "width:100%";
+  send.onclick = async () => {
+    send.disabled = true; msg.textContent = "Envoi...";
+    const { error } = await sb.from("listing_reports").insert({
+      listing_id: String(l.id), reason: sel.value, details: det.value.trim() || null
+    });
+    if(error){ msg.textContent = "Erreur : " + error.message; send.disabled = false; return; }
+    msg.textContent = "Merci, ton signalement a été envoyé à l'équipe MadaCar.";
+    setTimeout(() => ov.remove(), 1800);
+  };
+  cancel.onclick = () => ov.remove();
+  box.appendChild(sel); box.appendChild(det); box.appendChild(msg);
+  box.appendChild(send); box.appendChild(cancel);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+}
 $("q").oninput = render;
 $("max").oninput = render;
 load();
