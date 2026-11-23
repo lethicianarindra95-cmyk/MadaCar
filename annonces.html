@@ -172,7 +172,10 @@ function openDetail(l){
   const sh = el("button","back","Partager cette annonce");
   sh.style.cssText = "width:100%;margin-top:12px;padding:13px;font-size:15px";
   sh.onclick = () => partager(l);
-  d.appendChild(sh);
+  d.appendChild(sh);  const rp = el("button","back","⚠ Signaler cette annonce");
+  rp.style.cssText = "width:100%;margin-top:8px;padding:13px;font-size:15px;background:#3a1f1f;color:#f08a8a";
+  rp.onclick = () => signaler(l);
+  d.appendChild(rp);
   d.classList.remove("hide");
   d.scrollTop = 0;
 }
