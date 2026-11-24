@@ -301,7 +301,7 @@ async function loadRep(){
  const known=["id","reason","details","title","city","created","t","n","phone","lstatus"]; 
   box.innerHTML=ls.map(x=>{
     const extra=Object.keys(x).filter(k=>!known.includes(k)&&x[k]!=null&&x[k]!=="").map(k=>esc(k)+" : "+esc(x[k])).join("<br>");
-    return `<div class="rep"><b>${esc(x.title||"Annonce supprimée")}</b> <small>${esc(x.city||"")}</small><br>Motif : ${esc(x.reason)}<br>${x.details?esc(x.details)+"<br>":""}<small>${extra}</small><div class="acts"><button onclick="handleRep(${Number(x.id)},'remove')">Retirer l'annonce</button><button onclick="handleRep(${Number(x.id)},'dismiss')">Ignorer</button></div></div>`}).join("");
+    return `<div class="rep"><b>${esc(x.title||"Annonce supprimée")}</b> <small>${esc(x.city||"")}</small><br>Motif : ${esc(x.reason)}<br>${x.details?esc(x.details)+"<br>":""}<small>${esc(x.t)} · ${esc(x.n)} signalement(s) sur cette annonce · ${esc(x.phone)}</small><div class="acts"><button onclick="handleRep(${Number(x.id)},'remove')">Retirer l'annonce</button><button onclick="handleRep(${Number(x.id)},'dismiss')">Ignorer</button></div></div>`}).join("");
 }
 async function handleRep(id,action){
   if(action==="remove"&&!confirm("Retirer cette annonce ?"))return;
