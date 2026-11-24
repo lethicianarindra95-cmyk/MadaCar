@@ -177,9 +177,20 @@ function openDetail(l){
   rp.onclick = () => signaler(l);
   d.appendChild(rp);
   d.classList.remove("hide");
-  d.scrollTop = 0;
+    d.scrollTop = 0;
+  enregistrerVue(l);
 }
-
+async function enregistrerVue(l){
+  try{
+    const cle = "vu_" + l.id;
+    if(sessionStorage.getItem(cle)) return;
+    sessionStorage.setItem(cle, "1");
+    const { data } = await sb.auth.getSession();
+    const uid = data && data.session ? data.session.user.id : null;
+    if(uid && uid === l.seller_id) return;
+    await sb.from("listing_views").insert({ listing_id: String(l.id), viewer_id: uid });
+  }catch(e){}
+}
 async function openFromLink(){
   const id = new URLSearchParams(location.search).get("id");
   if(!id) return;
