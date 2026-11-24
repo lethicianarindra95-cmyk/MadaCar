@@ -198,7 +198,7 @@ async function openFromLink(){
   let l = all.find(x => x.id === id);
   if(!l){
     const { data } = await sb.from("listings")
-      .select("id,title,description,price_ar,brand,model,year,mileage_km,city,contact_phone,photos,source,source_url,created_at")
+      .select("id,seller_id,title,description,price_ar,brand,model,year,mileage_km,city,contact_phone,photos,source,source_url,created_at")
       .eq("id", id).eq("status", "approved").maybeSingle();
     l = data;
   }
