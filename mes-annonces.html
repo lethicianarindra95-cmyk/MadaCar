@@ -123,6 +123,9 @@ async function loadList(){
   const box=document.getElementById('list');
   if(error){box.innerHTML='<div class="empty">Erreur : '+esc(error.message)+'</div>';return}
   if(!data.length){box.innerHTML='<div class="empty">Aucune annonce. <a href="publier.html" style="color:#fff">Publier une annonce</a></div>';return}
+    const vues={};
+  const {data:vv}=await sb.from('listing_views').select('listing_id').in('listing_id',data.map(i=>i.id));
+  (vv||[]).forEach(v=>{vues[v.listing_id]=(vues[v.listing_id]||0)+1});
   box.innerHTML=data.map(i=>{
     const ph=(i.photos||[]).map(photoUrl)[0];
     let st='';
@@ -134,7 +137,7 @@ async function loadList(){
       <div class="info">
         <div class="price">${Number(i.price_ar).toLocaleString('fr-FR')} Ar</div>
         <div>${esc(i.title)}</div>
-        <div class="meta">Publiée le ${fmt(i.created_at)}</div>
+                <div class="meta">Publiée le ${fmt(i.created_at)} · 👁 ${vues[i.id]||0} vue${(vues[i.id]||0)>1?'s':''}</div>
         ${st}
         <button class="danger" style="margin-top:12px" onclick="del('${i.id}')">Supprimer</button>
       </div>
