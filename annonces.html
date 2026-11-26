@@ -183,13 +183,14 @@ function openDetail(l){
 async function enregistrerVue(l){
   try{
     const cle = "vu_" + l.id;
-    if(sessionStorage.getItem(cle)) return;
+    if(sessionStorage.getItem(cle)){ alert("Test : vue déjà comptée dans cet onglet"); return; }
     const { data } = await sb.auth.getSession();
     const uid = data && data.session ? data.session.user.id : null;
-    if(uid && uid === l.seller_id) return;
+    if(uid && uid === l.seller_id){ alert("Test : tu es le vendeur, ta vue n'est pas comptée"); return; }
     const { error } = await sb.from("listing_views").insert({ listing_id: String(l.id), viewer_id: uid });
     if(error){ alert("Vue non enregistrée : " + error.message); return; }
     sessionStorage.setItem(cle, "1");
+    alert("Test : vue enregistrée ✔");
   }catch(e){ alert("Erreur vue : " + e.message); }
 }
 async function openFromLink(){
